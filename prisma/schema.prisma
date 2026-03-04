@@ -38,6 +38,8 @@ model Account {
   refresh_token        String?
   expires_at           Int?
 
+  refresh_token_expires_in Int? // for github
+
   password_hash        String?
 
   createdAt            DateTime @default(now())
