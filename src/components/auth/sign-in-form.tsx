@@ -71,6 +71,9 @@ export function SignInForm() {
       <Button className="w-full" type="submit" disabled={isPending}>
         {isPending ? "Signing in..." : "Sign in"}
       </Button>
+      <button onClick={()=>signIn("github")}>
+        sign in with github
+      </button>
       <p className="text-sm text-muted-foreground">
         Need an account? <Link className="underline" href="/signup">Create one</Link>
       </p>

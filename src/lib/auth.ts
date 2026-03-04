@@ -1,5 +1,6 @@
 import { getServerSession, type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GitHubProvider from "next-auth/providers/github"
 
 import { verifyPassword } from "@/lib/password";
 import { findUserByEmail } from "@/lib/user-store";
@@ -12,6 +13,10 @@ export const authOptions: NextAuthOptions = {
 		signIn: "/signin",
 	},
 	providers: [
+        GitHubProvider({
+      clientId: process.env.GITHUB_ID!,
+      clientSecret: process.env.GITHUB_SECRET!,
+    }),
 		CredentialsProvider({
 			name: "Credentials",
 			credentials: {

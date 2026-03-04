@@ -27,6 +27,7 @@ export default async function SignInPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <SignInForm />
+          
           <Link className="text-sm underline" href="/">
             Back to landing page
           </Link>
