@@ -1,9 +1,10 @@
 import { getServerSession, type NextAuthOptions } from "next-auth";
+import type { Account, Profile } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import GitHubProvider from "next-auth/providers/github"
+import GitHubProvider from "next-auth/providers/github";
 
 import { verifyPassword } from "@/lib/password";
-import { findUserByEmail } from "@/lib/user-store";
+import { findUserByEmail, upsertGitHubUserAccount } from "@/lib/user-store";
 
 export const authOptions: NextAuthOptions = {
 	session: {
@@ -13,7 +14,7 @@ export const authOptions: NextAuthOptions = {
 		signIn: "/signin",
 	},
 	providers: [
-        GitHubProvider({
+		GitHubProvider({
       clientId: process.env.GITHUB_ID!,
       clientSecret: process.env.GITHUB_SECRET!,
     }),
@@ -39,7 +40,7 @@ export const authOptions: NextAuthOptions = {
 
 				const user = await findUserByEmail(email);
 
-				if (!user) {
+				if (!user || !user.email || !user.passwordHash) {
 					return null;
 				}
 
@@ -50,13 +51,60 @@ export const authOptions: NextAuthOptions = {
 				}
 
 				return {
-					id: user.id,
+					id: String(user.id),
 					name: user.name,
 					email: user.email,
 				};
 			},
 		}),
 	],
+	callbacks: {
+		async signIn({ user, account, profile }) {
+			if (account?.provider !== "github") {
+				return true;
+			}
+
+			const githubAccount = account as Account;
+			const githubProfile = profile as Profile | undefined;
+			const refreshTokenExpiresInValue = (githubProfile as Record<string, unknown> | undefined)?.[
+				"refresh_token_expires_in"
+			];
+			const refreshTokenExpiresIn =
+				typeof refreshTokenExpiresInValue === "number" ? refreshTokenExpiresInValue : null;
+
+			const dbUser = await upsertGitHubUserAccount({
+				providerAccountId: githubAccount.providerAccountId,
+				email: user.email,
+				name: user.name,
+				image: user.image,
+				accessToken: githubAccount.access_token,
+				refreshToken: githubAccount.refresh_token,
+				expiresAt: githubAccount.expires_at,
+				refreshTokenExpiresIn,
+			});
+
+			user.id = String(dbUser.id);
+			user.name = dbUser.name;
+			user.email = dbUser.email;
+			user.image = dbUser.profilePhoto;
+
+			return true;
+		},
+		async jwt({ token, user }) {
+			if (user?.id) {
+				token.sub = user.id;
+			}
+
+			return token;
+		},
+		async session({ session, token }) {
+			if (session.user) {
+				session.user.id = token.sub ?? session.user.id;
+			}
+
+			return session;
+		},
+	},
 };
 
 export function auth() {

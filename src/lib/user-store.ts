@@ -1,44 +1,36 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { PROVIDER, type User } from "@prisma/client";
 
-type StoredUser = {
-  id: string;
-  name: string;
-  email: string;
-  passwordHash: string;
-  createdAt: string;
-};
+import { prisma } from "@/lib/prisma";
 
-const usersFilePath = path.join(process.cwd(), "data", "users.json");
-
-async function ensureUsersFile() {
-  await mkdir(path.dirname(usersFilePath), { recursive: true });
-
-  try {
-    await readFile(usersFilePath, "utf8");
-  } catch {
-    await writeFile(usersFilePath, "[]", "utf8");
-  }
-}
-
-async function readUsers() {
-  await ensureUsersFile();
-
-  const contents = await readFile(usersFilePath, "utf8");
-  return JSON.parse(contents) as StoredUser[];
-}
-
-async function writeUsers(users: StoredUser[]) {
-  await ensureUsersFile();
-  await writeFile(usersFilePath, JSON.stringify(users, null, 2), "utf8");
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
 }
 
 export async function findUserByEmail(email: string) {
-  const normalizedEmail = email.trim().toLowerCase();
-  const users = await readUsers();
+  const normalizedEmail = normalizeEmail(email);
 
-  return users.find((user) => user.email === normalizedEmail) ?? null;
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    include: {
+      accounts: {
+        where: { provider: PROVIDER.CREDENTIALS },
+        take: 1,
+      },
+    },
+  });
+
+  const credentialsAccount = user?.accounts[0];
+
+  if (!user || !credentialsAccount?.password_hash) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    passwordHash: credentialsAccount.password_hash,
+  };
 }
 
 export async function createUser(input: {
@@ -46,23 +38,107 @@ export async function createUser(input: {
   email: string;
   passwordHash: string;
 }) {
-  const normalizedEmail = input.email.trim().toLowerCase();
-  const users = await readUsers();
+  const normalizedEmail = normalizeEmail(input.email);
 
-  if (users.some((user) => user.email === normalizedEmail)) {
+  const existing = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+  });
+
+  if (existing) {
     throw new Error("A user with this email already exists.");
   }
 
-  const newUser: StoredUser = {
-    id: randomUUID(),
-    name: input.name.trim(),
-    email: normalizedEmail,
-    passwordHash: input.passwordHash,
-    createdAt: new Date().toISOString(),
-  };
+  const user = await prisma.user.create({
+    data: {
+      name: input.name.trim(),
+      email: normalizedEmail,
+      accounts: {
+        create: {
+          provider: PROVIDER.CREDENTIALS,
+          providerAccountId: normalizedEmail,
+          password_hash: input.passwordHash,
+        },
+      },
+    },
+  });
 
-  users.push(newUser);
-  await writeUsers(users);
+  return user;
+}
 
-  return newUser;
+export async function upsertGitHubUserAccount(input: {
+  providerAccountId: string;
+  email?: string | null;
+  name?: string | null;
+  image?: string | null;
+  accessToken?: string | null;
+  refreshToken?: string | null;
+  expiresAt?: number | null;
+  refreshTokenExpiresIn?: number | null;
+}) {
+  const normalizedEmail = input.email ? normalizeEmail(input.email) : null;
+
+  const linkedAccount = await prisma.account.findUnique({
+    where: {
+      provider_providerAccountId: {
+        provider: PROVIDER.GITHUB,
+        providerAccountId: input.providerAccountId,
+      },
+    },
+    include: { user: true },
+  });
+
+  let user: User | null = linkedAccount?.user ?? null;
+
+  if (!user && normalizedEmail) {
+    user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+  }
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        name: input.name?.trim() || normalizedEmail || "GitHub user",
+        profilePhoto: input.image ?? null,
+        emailVerified: Boolean(normalizedEmail),
+      },
+    });
+  } else {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        name: input.name?.trim() || user.name,
+        profilePhoto: input.image ?? user.profilePhoto,
+        emailVerified: user.emailVerified || Boolean(normalizedEmail),
+      },
+    });
+  }
+
+  await prisma.account.upsert({
+    where: {
+      provider_providerAccountId: {
+        provider: PROVIDER.GITHUB,
+        providerAccountId: input.providerAccountId,
+      },
+    },
+    create: {
+      userId: user.id,
+      provider: PROVIDER.GITHUB,
+      providerAccountId: input.providerAccountId,
+      access_token: input.accessToken ?? null,
+      refresh_token: input.refreshToken ?? null,
+      expires_at: input.expiresAt ?? null,
+      refresh_token_expires_in: input.refreshTokenExpiresIn ?? null,
+    },
+    update: {
+      userId: user.id,
+      access_token: input.accessToken ?? null,
+      refresh_token: input.refreshToken ?? null,
+      expires_at: input.expiresAt ?? null,
+      refresh_token_expires_in: input.refreshTokenExpiresIn ?? null,
+    },
+  });
+
+  return user;
 }
