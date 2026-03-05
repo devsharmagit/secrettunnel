@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
+import { redis } from "@/lib/redis";
 
 export default async function Home() {
   const session = await auth();
