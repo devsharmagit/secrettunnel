@@ -17,6 +17,13 @@ function getCreatorIp(request: Request): string {
 
 export async function POST(request: Request) {
   try {
+    console.info("[secrets-route] request received", {
+      proxyActive: request.headers.get("x-proxy-active"),
+      forwardedFor: request.headers.get("x-forwarded-for"),
+      realIp: request.headers.get("x-real-ip"),
+      cfIp: request.headers.get("cf-connecting-ip"),
+    });
+
     const body = await request.json();
     const { success, data, error } = CreateSecretSchema.safeParse(body);
 
