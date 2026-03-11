@@ -29,7 +29,9 @@ export async function POST(request: Request) {
 
     const token = crypto.randomUUID();
     const ttlSeconds = data.ttl;
+    const auditTTLSeconds = ttlSeconds + 86400;
     const createdAt = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
     const creatorIp = getCreatorIp(request);
 
     const secretPayload = {
@@ -41,11 +43,14 @@ export async function POST(request: Request) {
     const auditPayload = {
       createdAt,
       creatorIp,
+      expiresAt,
+      viewedAt: null,
+      viewerIp: null,
     };
 
     await Promise.all([
       redis.setex(`secret:${token}`, ttlSeconds, JSON.stringify(secretPayload)),
-      redis.setex(`audit:${token}`, ttlSeconds, JSON.stringify(auditPayload)),
+      redis.setex(`audit:${token}`, auditTTLSeconds, JSON.stringify(auditPayload)),
     ]);
 
     return NextResponse.json({ token }, { status: 201 });
