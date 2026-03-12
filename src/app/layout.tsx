@@ -1,10 +1,22 @@
 import type { Metadata } from "next";
+import { Geist, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-plex-mono",
+});
+
 export const metadata: Metadata = {
   title: "SecretTunnel",
-  description: "Minimal auth flow for SecretTunnel",
+  description: "Share a secret. End-to-end encrypted. Burned after reading.",
 };
 
 export default function RootLayout({
@@ -13,10 +25,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-background text-foreground">
+    <html lang="en" className={`${geist.variable} ${plexMono.variable} dark`}>
+      <body className="min-h-screen bg-[#0c0c0c] text-[#f0ece4] font-sans antialiased selection:bg-[#d4a84b] selection:text-[#0c0c0c]">
         {children}
-        <Toaster theme="dark" position="bottom-center" />
+        <Toaster 
+          theme="dark" 
+          position="bottom-center" 
+          toastOptions={{ 
+            style: { 
+              background: '#161616', 
+              border: '1px solid #2a2a2a', 
+              color: '#f0ece4', 
+              borderRadius: '2px', // rounded-sm approx
+              fontFamily: 'var(--font-geist)'
+            } 
+          }} 
+        />
       </body>
     </html>
   );

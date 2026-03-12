@@ -1,25 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Plus, Lock, Globe, Clock, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Copy } from "lucide-react";
 import { toast } from "sonner";
 import { generateKey, generateSalt, applyPasswordLayer, encrypt, exportKey } from "@/lib/crypto";
 
 export function SecretForm() {
   const [content, setContent] = useState("");
-  const [ttl, setTtl] = useState("86400"); // Default 1 day
+  const [ttl, setTtl] = useState("86400"); // Default 24h (1 day = 86400s)
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
 
@@ -41,7 +31,7 @@ export function SecretForm() {
       if (password) {
         const salt = generateSalt();
         keyToUse = await applyPasswordLayer(baseKey, password, salt);
-        saltForServer = salt; // we store the salt in the passwordHash field on the server
+        saltForServer = salt;
       }
 
       const { ciphertext, iv } = await encrypt(content, keyToUse);
@@ -64,12 +54,11 @@ export function SecretForm() {
       }
 
       const token = data.token;
-      // create URL: /s/[token]#key=[exportedKey]
       const url = `${window.location.origin}/s/${token}#key=${encodeURIComponent(exportedKeyBase64)}`;
       setShareUrl(url);
       setContent("");
       setPassword("");
-      toast.success("Secret created successfully.");
+      setShowPassword(false);
     } catch (error) {
       console.error(error);
       toast.error(error instanceof Error ? error.message : "Something went wrong.");
@@ -81,112 +70,139 @@ export function SecretForm() {
   const copyToClipboard = () => {
     if (shareUrl) {
       navigator.clipboard.writeText(shareUrl);
-      toast.success("Copied to clipboard!");
+      toast.success("Copied to clipboard");
     }
   };
 
   if (shareUrl) {
     return (
-      <div className="flex flex-col gap-6 rounded-sm border border-[#2a2a2a] bg-[#111111] p-6 shadow-none">
-        <div className="flex items-center gap-2 font-mono text-sm text-green-400">
-          <Sparkles className="size-4" />
-          <span>Secure link generated</span>
-        </div>
-        <p className="font-sans text-sm text-[#888888]">
-          This link will only work once. Save it now, it will be permanently destroyed after being viewed.
-        </p>
-        
-        <div className="flex gap-2">
-          <Input 
-            readOnly 
-            value={shareUrl} 
-            className="font-mono text-xs bg-[#0a0a0a] border-[#2a2a2a] text-white focus-visible:ring-1 focus-visible:ring-[#444]" 
-          />
-          <Button 
-            onClick={copyToClipboard}
-            className="shrink-0 rounded-sm bg-white font-mono text-xs uppercase tracking-widest text-black hover:bg-gray-200"
-          >
-            <Copy className="mr-2 size-4" />
-            Copy
-          </Button>
+      <div className="flex flex-col gap-6 w-full">
+        <div>
+          <h1 className="text-[28px] font-medium tracking-tight text-[#f0ece4] mb-2">Share a secret.</h1>
+          <p className="font-mono text-[13px] text-[#8a8a8a]">
+            End-to-end encrypted. Burned after reading. The server never sees your plaintext.
+          </p>
         </div>
 
-        <Button
-          variant="outline"
+        <div className="bg-[#161616] border border-[#2a2a2a] rounded-sm p-5 w-full">
+          <p className="font-sans text-[11px] font-semibold tracking-wider text-[#8a8a8a] uppercase mb-4">
+            YOUR SECRET LINK
+          </p>
+          
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <p className="font-mono text-[13px] text-[#f0ece4] break-all leading-relaxed">
+              {shareUrl}
+            </p>
+            <button 
+              onClick={copyToClipboard}
+              className="text-[#8a8a8a] hover:text-[#d4a84b] transition-colors shrink-0 outline-none"
+              aria-label="Copy to clipboard"
+            >
+              <Copy className="size-[18px]" />
+            </button>
+          </div>
+
+          <div className="bg-[#1f1f1f] border-l-[3px] border-[#b33a3a] px-4 py-3">
+            <p className="font-sans text-[13px] text-[#8a8a8a] leading-relaxed">
+              This link works once. After it&apos;s opened, the secret is permanently destroyed.
+            </p>
+          </div>
+        </div>
+
+        <button
           onClick={() => setShareUrl(null)}
-          className="w-full rounded-sm border border-[#2a2a2a] bg-transparent font-mono text-xs uppercase tracking-widest text-[#f5f5f5] hover:border-white/30 hover:bg-[#1a1a1a]"
+          className="text-[13px] text-[#8a8a8a] hover:text-[#f0ece4] transition-colors self-start outline-none"
         >
-          <Plus className="mr-2 size-4" />
-          Create another
-        </Button>
+          ← Create another secret
+        </button>
       </div>
     );
   }
 
+  const ttlOptions = [
+    { label: "1h", value: "3600" },
+    { label: "24h", value: "86400" },
+    { label: "7d", value: "604800" },
+    { label: "30d", value: "2592000" },
+  ];
+
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 rounded-sm border border-[#2a2a2a] bg-[#111111] p-6 shadow-none">
-      <div className="space-y-2">
-        <Label htmlFor="content" className="font-mono text-xs uppercase tracking-widest text-[#888888]">
-          Secret Content
-        </Label>
-        <Textarea
-          id="content"
-          placeholder="Paste your sensitive data here..."
+    <form onSubmit={handleSubmit} className="flex flex-col gap-8 w-full">
+      <div>
+        <h1 className="text-[28px] font-medium tracking-tight text-[#f0ece4] mb-2">Share a secret.</h1>
+        <p className="font-mono text-[13px] text-[#8a8a8a]">
+          End-to-end encrypted. Burned after reading. The server never sees your plaintext.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <textarea
+          placeholder="Paste your secret here — API keys, passwords, .env files…"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          className="min-h-[150px] resize-y bg-[#0a0a0a] border-[#2a2a2a] font-mono text-sm text-[#f5f5f5] focus-visible:ring-1 focus-visible:ring-[#444]"
+          className="w-full min-h-[180px] bg-[#161616] border border-[#2a2a2a] rounded-sm p-4 font-mono text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors resize-y"
           required
         />
-      </div>
+        
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-2">
+          <div className="flex items-center gap-2">
+            {ttlOptions.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setTtl(opt.value)}
+                className={`font-sans text-[13px] px-3 py-1.5 rounded-[999px] border transition-colors outline-none ${
+                  ttl === opt.value
+                    ? "bg-[#161616] border-[#d4a84b] text-[#d4a84b]"
+                    : "border-[#2a2a2a] text-[#8a8a8a] hover:text-[#f0ece4]"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
 
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="ttl" className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#888888]">
-            <Clock className="size-3" />
-            Expiration (TTL)
-          </Label>
-          <Select value={ttl} onValueChange={setTtl}>
-            <SelectTrigger id="ttl" className="bg-[#0a0a0a] border-[#2a2a2a] font-mono text-sm text-[#f5f5f5] focus:ring-1 focus:ring-[#444]">
-              <SelectValue placeholder="Select TTL" />
-            </SelectTrigger>
-            <SelectContent className="bg-[#111111] border-[#2a2a2a] text-[#f5f5f5]">
-              <SelectItem value="3600">1 Hour</SelectItem>
-              <SelectItem value="86400">1 Day</SelectItem>
-              <SelectItem value="604800">7 Days</SelectItem>
-            </SelectContent>
-          </Select>
+          {!showPassword && (
+            <button
+              type="button"
+              onClick={() => setShowPassword(true)}
+              className="font-sans text-[13px] text-[#8a8a8a] hover:text-[#f0ece4] transition-colors outline-none"
+            >
+              + Add password protection
+            </button>
+          )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="password" className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#888888]">
-            <Lock className="size-3" />
-            Encryption Password (Optional)
-          </Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="Add an extra layer..."
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="bg-[#0a0a0a] border-[#2a2a2a] font-mono text-sm text-[#f5f5f5] focus-visible:ring-1 focus-visible:ring-[#444]"
-          />
-        </div>
+        {showPassword && (
+          <div className="mt-2 flex flex-col gap-2 relative">
+            <input
+              type="password"
+              placeholder="Encryption password (optional)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-[#161616] border border-[#2a2a2a] rounded-sm px-4 py-3 font-mono text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setShowPassword(false);
+                setPassword("");
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a4a4a] hover:text-[#8a8a8a] font-mono text-[12px] outline-none"
+            >
+              [clear]
+            </button>
+          </div>
+        )}
       </div>
 
-      <Button
+      <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full rounded-sm bg-white font-mono text-xs uppercase tracking-widest text-black hover:bg-gray-200 disabled:opacity-50"
+        className="w-full h-[48px] bg-[#d4a84b] text-[#0c0c0c] font-sans font-semibold text-[15px] rounded-sm hover:bg-[#e8bf6a] transition-colors outline-none disabled:opacity-50 disabled:cursor-not-allowed mt-2"
       >
-        {isSubmitting ? (
-          <span className="animate-pulse">Encrypting...</span>
-        ) : (
-          <span className="flex items-center gap-2">
-            <Globe className="size-4" />
-            Generate Secure Link
-          </span>
-        )}
-      </Button>
+        {isSubmitting ? "Encrypting..." : "Encrypt & Generate Link"}
+      </button>
     </form>
   );
 }

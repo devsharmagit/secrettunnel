@@ -1,65 +1,35 @@
 import Link from "next/link";
-import { Github, Sparkles } from "lucide-react";
+import { Github } from "lucide-react";
 import { SecretForm } from "@/components/SecretForm";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#0a0a0a] text-[#f5f5f5] selection:bg-white/20">
-      <header className="sticky top-0 z-20 border-b border-[#2a2a2a] bg-[#0a0a0a]/80 backdrop-blur-sm">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-white" />
-            <p className="font-mono text-sm font-semibold tracking-tight text-white">
-              SecretTunnel<span className="animate-pulse opacity-50">_</span>
-            </p>
-          </div>
-          <nav className="flex items-center gap-6">
+    <main className="min-h-screen">
+      <header className="h-[52px] border-b border-[#2a2a2a] bg-[#0c0c0c] flex items-center">
+        <div className="mx-auto w-full max-w-[640px] px-4 flex items-center justify-between">
+          <Link href="/" className="font-sans font-semibold text-[15px] tracking-tight text-[#f0ece4] flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+            <span className="text-[#d4a84b]">{"//"}</span> SecretTunnel
+          </Link>
+          <nav className="flex items-center gap-5">
             <Link
-              className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#666666] transition-colors hover:text-white"
+              className="text-[#8a8a8a] transition-colors hover:text-[#d4a84b]"
               href="https://github.com/devsharma"
               target="_blank"
             >
-              <Github className="size-4" />
-              <span className="hidden sm:inline">GitHub</span>
+              <Github className="size-[18px]" />
             </Link>
             <Link
-              className="font-mono text-xs uppercase tracking-widest text-black bg-white px-3 py-1.5 rounded-sm transition-colors hover:bg-gray-200"
+              className="font-sans text-[13px] text-[#8a8a8a] transition-colors hover:text-[#d4a84b]"
               href="/signin"
             >
-              Log in
+              Sign in
             </Link>
           </nav>
         </div>
       </header>
 
-      <section
-        className="relative isolate flex flex-col justify-center min-h-[calc(100vh-73px)] overflow-hidden"
-        style={{
-          backgroundImage:
-            "linear-gradient(#2a2a2a 1px, transparent 1px), linear-gradient(90deg, #2a2a2a 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
-      >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.03)_0%,transparent_80%)]" />
-
-        <div className="relative mx-auto flex w-full max-w-4xl flex-col px-6 py-12">
-          
-          <div className="mb-12 max-w-2xl">
-            <h1 className="font-mono text-4xl uppercase tracking-tight text-white md:text-5xl lg:text-6xl mb-6">
-              Share secrets securely. <br />
-              <span className="text-[#666666]">End-to-end encrypted.</span>
-            </h1>
-            <p className="font-sans text-base leading-relaxed text-[#888888] mb-8">
-              Your data is encrypted in your browser. The server never sees the key. 
-              The secret self-destructs immediately after the first view or when it expires.
-            </p>
-          </div>
-
-          <div className="mx-auto w-full">
-            <SecretForm />
-          </div>
-          
-        </div>
+      <section className="mx-auto w-full max-w-[640px] px-4 py-20 pb-32">
+        <SecretForm />
       </section>
     </main>
   );
