@@ -1,6 +1,8 @@
 import { CreateSecretSchema } from "@/lib/schema";
 import { redis } from "@/lib/redis";
 import { NextResponse } from "next/server";
+import { authOptions } from "@/lib/auth";
+import { getServerSession } from "next-auth";
 
 function getCreatorIp(request: Request): string {
   const forwardedFor = request.headers.get("x-forwarded-for");
@@ -17,6 +19,7 @@ function getCreatorIp(request: Request): string {
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
     const body = await request.json();
     const { success, data, error } = CreateSecretSchema.safeParse(body);
 
@@ -46,12 +49,21 @@ export async function POST(request: Request) {
       expiresAt,
       viewedAt: null,
       viewerIp: null,
+      userid: session?.user.id ?? null
     };
 
-    await Promise.all([
-      redis.setex(`secret:${token}`, ttlSeconds, JSON.stringify(secretPayload)),
-      redis.setex(`audit:${token}`, auditTTLSeconds, JSON.stringify(auditPayload)),
-    ]);
+    const writes : Promise<"OK" | number>[] = [
+  redis.setex(`secret:${token}`, ttlSeconds, JSON.stringify(secretPayload)),
+  redis.setex(`audit:${token}`, auditTTLSeconds, JSON.stringify(auditPayload)),
+];
+
+if (session?.user.id) {
+  writes.push(
+    redis.lpush(`user:${session?.user.id}:secrets`, token)
+  );
+}
+
+await Promise.all(writes);
 
     return NextResponse.json({ token }, { status: 201 });
   } catch (error) {
