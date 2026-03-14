@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       expiresAt,
       viewedAt: null,
       viewerIp: null,
-      userid: session?.user.id ?? null
+      userId: session?.user.id ?? null
     };
 
     const writes : Promise<"OK" | number>[] = [
