@@ -1,90 +1,168 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { KeyRound, Sparkles, UserRoundPlus } from "lucide-react";
+import { Github, Eye, EyeOff } from "lucide-react";
 
-import { SignUpForm } from "@/components/auth/sign-up-form";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { auth } from "@/lib/auth";
+export default function SignUpPage() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-export default async function SignUpPage() {
-  const session = await auth();
+  // Simple strength calculation for UI purposes
+  const calculateStrength = (pwd: string) => {
+    let score = 0;
+    if (pwd.length > 0) score += 1; // Basic
+    if (pwd.length >= 8) score += 1; // Length
+    if (/[A-Z]/.test(pwd) && /[0-9]/.test(pwd)) score += 1; // Variety
+    if (/[^A-Za-z0-9]/.test(pwd)) score += 1; // Special char
+    return score;
+  };
 
-  if (session?.user) {
-    redirect("/dashboard");
-  }
+  const strength = calculateStrength(password);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    // Simulate sign up
+    setTimeout(() => setIsSubmitting(false), 1500);
+  };
 
   return (
-    <main
-      className="flex min-h-screen items-center justify-center bg-[#0a0a0a] px-6 py-10 text-[#f5f5f5]"
-      style={{
-        backgroundImage:
-          "linear-gradient(#2a2a2a 1px, transparent 1px), linear-gradient(90deg, #2a2a2a 1px, transparent 1px)",
-        backgroundSize: "40px 40px",
-      }}
-    >
-      <section className="w-full max-w-sm">
-        <Card className="space-y-6 rounded-sm border border-[#2a2a2a] bg-[#111111] p-8 shadow-none">
-          <CardHeader className="space-y-4 p-0">
-            <div className="flex items-center justify-between gap-3">
-              <p className="font-mono text-sm text-white">
-                SecretTunnel
-                <span className="animate-pulse">_</span>
-              </p>
-              <div className="inline-flex items-center gap-2 border border-[#2a2a2a] px-2 py-1 font-mono text-xs uppercase tracking-widest text-[#888888]">
-                <Sparkles className="size-3.5 text-white" />
-                Signup
-              </div>
-            </div>
+    <main className="min-h-screen flex items-center justify-center p-4 py-8">
+      <div className="w-full max-w-[400px] bg-[#161616] border border-[#2a2a2a] rounded-sm p-8 shadow-none my-auto">
+        
+        <div className="flex flex-col items-center mb-8">
+          <h1 className="font-sans font-semibold text-[18px] text-[#f0ece4] mb-2 flex items-center gap-1.5">
+            <span className="text-[#d4a84b]">{"//"}</span> SecretTunnel
+          </h1>
+          <p className="font-sans text-[13px] text-[#8a8a8a] text-center">
+            Create an account to track and manage your secrets.
+          </p>
+        </div>
 
-            <div>
-              <CardTitle className="font-mono text-xl tracking-tight text-white">Create your account</CardTitle>
-              <CardDescription className="mt-2 font-sans text-xs text-[#666666]">
-                Start secure tunneling with a modern authentication flow backed by your database.
-              </CardDescription>
-            </div>
-          </CardHeader>
+        <button
+          className="w-full h-[44px] flex items-center justify-center gap-2 bg-[#1f1f1f] border border-[#2a2a2a] rounded-sm hover:border-[#d4a84b] transition-colors outline-none mb-6"
+        >
+          <Github className="size-4 text-[#f0ece4]" />
+          <span className="font-sans font-medium text-[14px] text-[#f0ece4]">Continue with GitHub</span>
+        </button>
 
-          <CardContent className="space-y-5 p-0">
-            <div className="space-y-3 border border-[#2a2a2a] bg-[#0a0a0a] p-4 rounded-sm">
-              <div className="flex items-start gap-3">
-                <UserRoundPlus className="mt-0.5 size-4 shrink-0 text-white" />
-                <div>
-                  <p className="font-mono text-xs uppercase tracking-widest text-[#888888]">Quick onboarding</p>
-                  <p className="mt-1 font-sans text-xs leading-relaxed text-[#666666]">
-                    Create your identity in under a minute and enter the protected dashboard.
-                  </p>
-                </div>
-              </div>
-              <div className="h-px bg-[#2a2a2a]" />
-              <div className="flex items-start gap-3">
-                <KeyRound className="mt-0.5 size-4 shrink-0 text-white" />
-                <div>
-                  <p className="font-mono text-xs uppercase tracking-widest text-[#888888]">Strong validation</p>
-                  <p className="mt-1 font-sans text-xs leading-relaxed text-[#666666]">
-                    Zod and React Hook Form enforce clean, reliable form inputs.
-                  </p>
-                </div>
-              </div>
-            </div>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex-1 h-px bg-[#2a2a2a]" />
+          <span className="font-sans text-[11px] text-[#4a4a4a]">or</span>
+          <div className="flex-1 h-px bg-[#2a2a2a]" />
+        </div>
 
-            <div className="space-y-5">
-              <SignUpForm />
-              <Link
-                className="block text-center font-mono text-xs text-[#444444] transition-colors hover:text-white"
-                href="/"
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="name" className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a]">
+              Full name
+            </label>
+            <input
+              id="name"
+              type="text"
+              required
+              placeholder="Jane Doe"
+              className="w-full h-[40px] bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="email" className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a]">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              placeholder="name@example.com"
+              className="w-full h-[40px] bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="password" className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a]">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full h-[40px] bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 pr-10 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a4a4a] hover:text-[#8a8a8a] transition-colors outline-none"
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                Back to landing page
-              </Link>
+                {showPassword ? <EyeOff className="size-[14px]" /> : <Eye className="size-[14px]" />}
+              </button>
             </div>
-          </CardContent>
-        </Card>
-      </section>
+            
+            {/* Password Strength Indicator */}
+            {password.length > 0 && (
+              <div className="flex gap-1 mt-1">
+                {[1, 2, 3, 4].map((level) => {
+                  let bgColor = "bg-[#2a2a2a]";
+                  if (strength >= level) {
+                    if (strength === 1) bgColor = "bg-[#b33a3a]";
+                    else if (strength === 2) bgColor = "bg-[#8a6a2a]";
+                    else if (strength === 3) bgColor = "bg-[#d4a84b]";
+                    else if (strength === 4) bgColor = "bg-[#4a7c59]";
+                  }
+                  return (
+                    <div 
+                      key={level} 
+                      className={`flex-1 h-[3px] rounded-full transition-colors ${bgColor}`} 
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="confirm-password" className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a]">
+              Confirm password
+            </label>
+            <input
+              id="confirm-password"
+              type="password"
+              required
+              placeholder="••••••••"
+              className="w-full h-[40px] bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full h-[44px] bg-[#d4a84b] text-[#0c0c0c] font-sans font-semibold text-[14px] rounded-sm hover:bg-[#e8bf6a] transition-colors outline-none disabled:opacity-50 flex items-center justify-center mt-2"
+          >
+            {isSubmitting ? (
+              <span className="font-mono animate-pulse">Creating...</span>
+            ) : (
+              "Create Account"
+            )}
+          </button>
+        </form>
+
+        <div className="mt-6 flex flex-col items-center gap-3">
+          <p className="font-sans text-[13px] text-[#8a8a8a]">
+            Already have an account?{" "}
+            <Link href="/signin" className="text-[#d4a84b] hover:text-[#e8bf6a] outline-none transition-colors">
+              Sign in
+            </Link>
+          </p>
+        </div>
+
+      </div>
     </main>
   );
 }
