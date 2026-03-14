@@ -1,37 +1,86 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { Github, Eye, EyeOff } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { Eye, EyeOff, Github } from "lucide-react";
+import { useState } from "react";
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Simple strength calculation for UI purposes
   const calculateStrength = (pwd: string) => {
     let score = 0;
-    if (pwd.length > 0) score += 1; // Basic
-    if (pwd.length >= 8) score += 1; // Length
-    if (/[A-Z]/.test(pwd) && /[0-9]/.test(pwd)) score += 1; // Variety
-    if (/[^A-Za-z0-9]/.test(pwd)) score += 1; // Special char
+    if (pwd.length > 0) score += 1;
+    if (pwd.length >= 8) score += 1;
+    if (/[A-Z]/.test(pwd) && /[0-9]/.test(pwd)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pwd)) score += 1;
     return score;
   };
 
   const strength = calculateStrength(password);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const name = String(formData.get("name") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const pwd = String(formData.get("password") ?? "");
+    const confirmPassword = String(formData.get("confirm-password") ?? "");
+
+    if (pwd !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setIsSubmitting(true);
-    // Simulate sign up
-    setTimeout(() => setIsSubmitting(false), 1500);
+
+    const response = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        email,
+        password: pwd,
+      }),
+    });
+
+    const data = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setError(data.error ?? "Unable to create account.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const result = await signIn("credentials", {
+      email,
+      password: pwd,
+      redirect: false,
+      callbackUrl: "/dashboard",
+    });
+
+    if (!result || result.error) {
+      setError("Account created, but automatic sign in failed.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    router.push(result.url ?? "/dashboard");
+    router.refresh();
   };
 
   return (
     <main className="min-h-screen flex items-center justify-center p-4 py-8">
-      <div className="w-full max-w-[400px] bg-[#161616] border border-[#2a2a2a] rounded-sm p-8 shadow-none my-auto">
-        
+      <div className="w-full max-w-100 bg-[#161616] border border-[#2a2a2a] rounded-sm p-8 shadow-none my-auto">
         <div className="flex flex-col items-center mb-8">
           <h1 className="font-sans font-semibold text-[18px] text-[#f0ece4] mb-2 flex items-center gap-1.5">
             <span className="text-[#d4a84b]">{"//"}</span> SecretTunnel
@@ -42,7 +91,9 @@ export default function SignUpPage() {
         </div>
 
         <button
-          className="w-full h-[44px] flex items-center justify-center gap-2 bg-[#1f1f1f] border border-[#2a2a2a] rounded-sm hover:border-[#d4a84b] transition-colors outline-none mb-6"
+          type="button"
+          onClick={() => signIn("github", { callbackUrl: "/dashboard" })}
+          className="w-full h-11 flex items-center justify-center gap-2 bg-[#1f1f1f] border border-[#2a2a2a] rounded-sm hover:border-[#d4a84b] transition-colors outline-none mb-6"
         >
           <Github className="size-4 text-[#f0ece4]" />
           <span className="font-sans font-medium text-[14px] text-[#f0ece4]">Continue with GitHub</span>
@@ -61,10 +112,11 @@ export default function SignUpPage() {
             </label>
             <input
               id="name"
+              name="name"
               type="text"
               required
               placeholder="Jane Doe"
-              className="w-full h-[40px] bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
+              className="w-full h-10 bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
             />
           </div>
 
@@ -74,10 +126,11 @@ export default function SignUpPage() {
             </label>
             <input
               id="email"
+              name="email"
               type="email"
               required
               placeholder="name@example.com"
-              className="w-full h-[40px] bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
+              className="w-full h-10 bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
             />
           </div>
 
@@ -88,12 +141,14 @@ export default function SignUpPage() {
             <div className="relative">
               <input
                 id="password"
+                name="password"
                 type={showPassword ? "text" : "password"}
                 required
+                minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full h-[40px] bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 pr-10 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
+                className="w-full h-10 bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 pr-10 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
               />
               <button
                 type="button"
@@ -101,11 +156,10 @@ export default function SignUpPage() {
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a4a4a] hover:text-[#8a8a8a] transition-colors outline-none"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? <EyeOff className="size-[14px]" /> : <Eye className="size-[14px]" />}
+                {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
               </button>
             </div>
-            
-            {/* Password Strength Indicator */}
+
             {password.length > 0 && (
               <div className="flex gap-1 mt-1">
                 {[1, 2, 3, 4].map((level) => {
@@ -117,9 +171,9 @@ export default function SignUpPage() {
                     else if (strength === 4) bgColor = "bg-[#4a7c59]";
                   }
                   return (
-                    <div 
-                      key={level} 
-                      className={`flex-1 h-[3px] rounded-full transition-colors ${bgColor}`} 
+                    <div
+                      key={level}
+                      className={`flex-1 h-0.75 rounded-full transition-colors ${bgColor}`}
                     />
                   );
                 })}
@@ -133,23 +187,23 @@ export default function SignUpPage() {
             </label>
             <input
               id="confirm-password"
+              name="confirm-password"
               type="password"
               required
+              minLength={6}
               placeholder="••••••••"
-              className="w-full h-[40px] bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
+              className="w-full h-10 bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
             />
           </div>
+
+          {error ? <p className="font-sans text-[12px] text-[#b33a3a]">{error}</p> : null}
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full h-[44px] bg-[#d4a84b] text-[#0c0c0c] font-sans font-semibold text-[14px] rounded-sm hover:bg-[#e8bf6a] transition-colors outline-none disabled:opacity-50 flex items-center justify-center mt-2"
+            className="w-full h-11 bg-[#d4a84b] text-[#0c0c0c] font-sans font-semibold text-[14px] rounded-sm hover:bg-[#e8bf6a] transition-colors outline-none disabled:opacity-50 flex items-center justify-center mt-2"
           >
-            {isSubmitting ? (
-              <span className="font-mono animate-pulse">Creating...</span>
-            ) : (
-              "Create Account"
-            )}
+            {isSubmitting ? <span className="font-mono animate-pulse">Creating...</span> : "Create Account"}
           </button>
         </form>
 
@@ -161,7 +215,6 @@ export default function SignUpPage() {
             </Link>
           </p>
         </div>
-
       </div>
     </main>
   );
