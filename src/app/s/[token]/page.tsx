@@ -19,7 +19,7 @@ export default async function SecretPage({
           <nav className="flex items-center gap-5">
             <Link
               className="text-[#8a8a8a] transition-colors hover:text-[#d4a84b]"
-              href="https://github.com/devsharma"
+              href="https://github.com/devsharmagit"
               target="_blank"
             >
               <Github className="size-[18px]" />

@@ -34,21 +34,6 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        <div className="flex items-center border border-[#2a2a2a] rounded-sm mb-8 overflow-hidden">
-          <div className="flex-1 px-6 py-5 bg-[#0c0c0c] border-r border-[#2a2a2a]">
-            <p className="font-mono text-[24px] text-[#f0ece4] leading-none mb-2">34</p>
-            <p className="font-sans text-[11px] tracking-wider uppercase text-[#8a8a8a]">Active Secrets</p>
-          </div>
-          <div className="flex-1 px-6 py-5 bg-[#0c0c0c] border-r border-[#2a2a2a]">
-            <p className="font-mono text-[24px] text-[#f0ece4] leading-none mb-2">12</p>
-            <p className="font-sans text-[11px] tracking-wider uppercase text-[#8a8a8a]">Viewed This Week</p>
-          </div>
-          <div className="flex-1 px-6 py-5 bg-[#0c0c0c]">
-            <p className="font-mono text-[24px] text-[#f0ece4] leading-none mb-2">8</p>
-            <p className="font-sans text-[11px] tracking-wider uppercase text-[#8a8a8a]">Burned</p>
-          </div>
-        </div>
-
         <AuditTable />
       </section>
     </main>

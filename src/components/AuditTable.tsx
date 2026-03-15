@@ -1,49 +1,55 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Check, Flame, Lock } from "lucide-react";
 import Link from "next/link";
 
 interface Secret {
   id: string;
   token: string;
-  createdAt: string;
-  expiresAt: string;
+  createdAt: string | null;
+  expiresAt: string | null;
   status: "ACTIVE" | "VIEWED" | "BURNED" | "EXPIRED";
-  viewedAt?: string;
+  viewedAt: string | null;
+  burnedAt: string | null;
+  expired: boolean;
 }
 
-const mockSecrets: Secret[] = [
-  {
-    id: "1",
-    token: "ab82f9x1jklmnopqrst",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 22).toISOString(),
-    status: "ACTIVE",
-  },
-  {
-    id: "2",
-    token: "x9yz88q2qwertyuiop",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    expiresAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    status: "EXPIRED",
-  },
-  {
-    id: "3",
-    token: "mp4l00z5asdfghjkl",
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 23.5).toISOString(),
-    status: "VIEWED",
-    viewedAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-  },
-  {
-    id: "4",
-    token: "c7vbnm12zxcvbnm",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 4).toISOString(),
-    status: "BURNED",
-  },
-];
+interface AuditApiEntry {
+  token: string;
+  expired: boolean;
+  createdAt: string | null;
+  expiresAt: string | null;
+  viewedAt: string | null;
+  burnedAt: string | null;
+}
+
+interface AuditApiResponse {
+  success: boolean;
+  data: AuditApiEntry[];
+  message?: string;
+}
+
+function deriveStatus(entry: AuditApiEntry): Secret["status"] {
+  if (entry.burnedAt) return "BURNED";
+  if (entry.viewedAt) return "VIEWED";
+  if (entry.expired) return "EXPIRED";
+  if (entry.expiresAt && new Date(entry.expiresAt).getTime() < Date.now()) return "EXPIRED";
+  return "ACTIVE";
+}
+
+function toSecret(entry: AuditApiEntry): Secret {
+  return {
+    id: entry.token,
+    token: entry.token,
+    createdAt: entry.createdAt,
+    expiresAt: entry.expiresAt,
+    viewedAt: entry.viewedAt,
+    burnedAt: entry.burnedAt,
+    expired: entry.expired,
+    status: deriveStatus(entry),
+  };
+}
 
 const getRelativeTime = (isoString: string) => {
   const diffInSeconds = (new Date(isoString).getTime() - Date.now()) / 1000;
@@ -91,8 +97,55 @@ const getStatusStyles = (status: Secret["status"]) => {
 };
 
 export function AuditTable() {
+  const [secrets, setSecrets] = useState<Secret[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [burningId, setBurningId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAudit() {
+      setIsLoading(true);
+      setLoadError(null);
+
+      try {
+        const response = await fetch("/api/audit", { method: "GET", cache: "no-store" });
+        const json = (await response.json()) as AuditApiResponse;
+
+        if (!response.ok || !json.success) {
+          throw new Error(json.message ?? "Failed to fetch audit entries.");
+        }
+
+        if (cancelled) return;
+
+        const rows = json.data
+          .map(toSecret)
+          .sort((a, b) => {
+            const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return bTime - aTime;
+          });
+
+        setSecrets(rows);
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "Failed to fetch audit entries.";
+        setLoadError(message);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadAudit();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleCopy = (id: string, token: string) => {
     navigator.clipboard.writeText(token);
@@ -100,33 +153,115 @@ export function AuditTable() {
     setTimeout(() => setCopiedId(null), 1500);
   };
 
-  const handleBurn = (id: string) => {
+  const handleBurn = async (id: string) => {
+    const response = await fetch(`/api/secrets/${id}`, { method: "DELETE" });
+
+    if (response.ok || response.status === 410) {
+      setSecrets((current) =>
+        current.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                burnedAt: new Date().toISOString(),
+                status: "BURNED",
+              }
+            : item
+        )
+      );
+    }
+
     setBurningId(null);
-    console.log("Burn secret", id);
-    // In a real app, send API request to burn, then update state.
   };
 
-  const [now] = useState(() => Date.now());
+  const now = Date.now();
+  const stats = useMemo(() => {
+    const viewedSince = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const active = secrets.filter((secret) => secret.status === "ACTIVE").length;
+    const viewedThisWeek = secrets.filter(
+      (secret) => secret.viewedAt && new Date(secret.viewedAt).getTime() >= viewedSince
+    ).length;
+    const burned = secrets.filter((secret) => secret.status === "BURNED").length;
 
-  if (mockSecrets.length === 0) {
+    return {
+      active,
+      viewedThisWeek,
+      burned,
+    };
+  }, [secrets]);
+
+  if (isLoading) {
     return (
       <div className="w-full border border-[#2a2a2a] rounded-sm bg-[#161616]">
-        <div className="py-[64px] flex flex-col items-center justify-center text-center">
-          <Lock className="size-[32px] text-[#2a2a2a] mb-4" />
+        <div className="py-16 flex items-center justify-center">
+          <p className="font-sans text-[13px] text-[#8a8a8a]">Loading secrets...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="w-full border border-[#2a2a2a] rounded-sm bg-[#161616]">
+        <div className="py-16 flex flex-col items-center justify-center text-center gap-2 px-6">
+          <p className="font-sans text-[13px] text-[#b33a3a]">{loadError}</p>
+          <p className="font-sans text-[13px] text-[#8a8a8a]">Please refresh and try again.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (secrets.length === 0) {
+    return (
+      <>
+        <div className="flex items-center border border-[#2a2a2a] rounded-sm mb-8 overflow-hidden">
+          <div className="flex-1 px-6 py-5 bg-[#0c0c0c] border-r border-[#2a2a2a]">
+            <p className="font-mono text-[24px] text-[#f0ece4] leading-none mb-2">0</p>
+            <p className="font-sans text-[11px] tracking-wider uppercase text-[#8a8a8a]">Active Secrets</p>
+          </div>
+          <div className="flex-1 px-6 py-5 bg-[#0c0c0c] border-r border-[#2a2a2a]">
+            <p className="font-mono text-[24px] text-[#f0ece4] leading-none mb-2">0</p>
+            <p className="font-sans text-[11px] tracking-wider uppercase text-[#8a8a8a]">Viewed This Week</p>
+          </div>
+          <div className="flex-1 px-6 py-5 bg-[#0c0c0c]">
+            <p className="font-mono text-[24px] text-[#f0ece4] leading-none mb-2">0</p>
+            <p className="font-sans text-[11px] tracking-wider uppercase text-[#8a8a8a]">Burned</p>
+          </div>
+        </div>
+
+        <div className="w-full border border-[#2a2a2a] rounded-sm bg-[#161616]">
+          <div className="py-16 flex flex-col items-center justify-center text-center">
+          <Lock className="size-8 text-[#2a2a2a] mb-4" />
           <p className="font-sans text-[16px] text-[#8a8a8a] mb-1">No secrets yet.</p>
           <p className="font-sans text-[13px] text-[#4a4a4a] mb-4">Create your first encrypted secret link.</p>
           <Link href="/" className="font-sans text-[13px] text-[#d4a84b] hover:text-[#e8bf6a] transition-colors">
             Get started →
           </Link>
         </div>
-      </div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="w-full border border-[#2a2a2a] rounded-sm bg-[#161616]">
-      <div className="w-full overflow-x-auto">
-        <table className="w-full text-left whitespace-nowrap">
+    <>
+      <div className="flex items-center border border-[#2a2a2a] rounded-sm mb-8 overflow-hidden">
+        <div className="flex-1 px-6 py-5 bg-[#0c0c0c] border-r border-[#2a2a2a]">
+          <p className="font-mono text-[24px] text-[#f0ece4] leading-none mb-2">{stats.active}</p>
+          <p className="font-sans text-[11px] tracking-wider uppercase text-[#8a8a8a]">Active Secrets</p>
+        </div>
+        <div className="flex-1 px-6 py-5 bg-[#0c0c0c] border-r border-[#2a2a2a]">
+          <p className="font-mono text-[24px] text-[#f0ece4] leading-none mb-2">{stats.viewedThisWeek}</p>
+          <p className="font-sans text-[11px] tracking-wider uppercase text-[#8a8a8a]">Viewed This Week</p>
+        </div>
+        <div className="flex-1 px-6 py-5 bg-[#0c0c0c]">
+          <p className="font-mono text-[24px] text-[#f0ece4] leading-none mb-2">{stats.burned}</p>
+          <p className="font-sans text-[11px] tracking-wider uppercase text-[#8a8a8a]">Burned</p>
+        </div>
+      </div>
+
+      <div className="w-full border border-[#2a2a2a] rounded-sm bg-[#161616]">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-left whitespace-nowrap">
           <thead>
             <tr className="bg-[#1f1f1f] border-b border-[#2a2a2a]">
               <th className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a] px-6 py-3 font-medium">Token</th>
@@ -138,35 +273,42 @@ export function AuditTable() {
             </tr>
           </thead>
           <tbody>
-            {mockSecrets.map((secret, index) => {
-              const isLast = index === mockSecrets.length - 1;
-              const isExpired = new Date(secret.expiresAt).getTime() < now;
+            {secrets.map((secret, index) => {
+              const isLast = index === secrets.length - 1;
+              const isExpired =
+                secret.expired || (secret.expiresAt ? new Date(secret.expiresAt).getTime() < now : false);
               const canBurn = secret.status === "ACTIVE" && !isExpired;
 
               return (
                 <React.Fragment key={secret.id}>
-                  <tr className={`h-[52px] bg-[#161616] hover:bg-[#1a1a1a] transition-colors ${!isLast || burningId === secret.id ? "border-b border-[#2a2a2a]" : ""}`}>
+                  <tr className={`h-13 bg-[#161616] hover:bg-[#1a1a1a] transition-colors ${!isLast || burningId === secret.id ? "border-b border-[#2a2a2a]" : ""}`}>
                     <td className="px-6">
                       <button 
                         onClick={() => handleCopy(secret.id, secret.token)}
-                        className="font-mono text-[13px] text-[#f0ece4] hover:text-[#d4a84b] transition-colors outline-none inline-flex items-center min-w-[100px]"
+                        className="font-mono text-[13px] text-[#f0ece4] hover:text-[#d4a84b] transition-colors outline-none inline-flex items-center min-w-25"
                         title="Copy token"
                       >
                         {copiedId === secret.id ? (
-                          <Check className="size-[14px] text-[#4a7c59]" />
+                          <Check className="size-3.5 text-[#4a7c59]" />
                         ) : (
                           `${secret.token.substring(0, 8)}…`
                         )}
                       </button>
                     </td>
                     <td className="px-6">
-                      <span className="font-sans text-[13px] text-[#8a8a8a] cursor-default" title={new Date(secret.createdAt).toISOString()}>
-                        {getRelativeTime(secret.createdAt)}
-                      </span>
+                      {secret.createdAt ? (
+                        <span className="font-sans text-[13px] text-[#8a8a8a] cursor-default" title={new Date(secret.createdAt).toISOString()}>
+                          {getRelativeTime(secret.createdAt)}
+                        </span>
+                      ) : (
+                        <span className="font-sans text-[13px] text-[#4a4a4a]">—</span>
+                      )}
                     </td>
                     <td className="px-6">
                       {isExpired ? (
                         <span className="font-mono text-[13px] text-[#b33a3a]">Expired</span>
+                      ) : !secret.expiresAt ? (
+                        <span className="font-sans text-[13px] text-[#4a4a4a]">—</span>
                       ) : (
                         <span className="font-mono text-[13px] text-[#8a8a8a]" title={new Date(secret.expiresAt).toISOString()}>
                           {getRelativeTime(secret.expiresAt)}
@@ -174,7 +316,7 @@ export function AuditTable() {
                       )}
                     </td>
                     <td className="px-6">
-                      <span className={`inline-flex items-center h-[22px] px-2 rounded-sm border font-mono text-[11px] ${getStatusStyles(secret.status)}`}>
+                      <span className={`inline-flex items-center h-5.5 px-2 rounded-sm border font-mono text-[11px] ${getStatusStyles(secret.status)}`}>
                         {secret.status}
                       </span>
                     </td>
@@ -194,10 +336,10 @@ export function AuditTable() {
                           className="text-[#4a4a4a] hover:text-[#b33a3a] transition-colors outline-none"
                           title="Burn secret"
                         >
-                          <Flame className="size-[16px]" />
+                          <Flame className="size-4" />
                         </button>
                       ) : (
-                        <span className="text-[#4a4a4a] inline-flex items-center justify-center w-[16px]">
+                        <span className="text-[#4a4a4a] inline-flex items-center justify-center w-4">
                           —
                         </span>
                       )}
@@ -220,7 +362,7 @@ export function AuditTable() {
                           </button>
                           <button
                             onClick={() => handleBurn(secret.id)}
-                            className="h-[28px] px-3 border border-[#b33a3a] rounded-sm font-sans font-medium text-[13px] text-[#b33a3a] hover:bg-[#b33a3a] hover:text-[#0c0c0c] transition-colors outline-none"
+                            className="h-7 px-3 border border-[#b33a3a] rounded-sm font-sans font-medium text-[13px] text-[#b33a3a] hover:bg-[#b33a3a] hover:text-[#0c0c0c] transition-colors outline-none"
                           >
                             Burn
                           </button>
@@ -232,22 +374,13 @@ export function AuditTable() {
               );
             })}
           </tbody>
-        </table>
-      </div>
+          </table>
+        </div>
 
-      <div className="flex items-center justify-between px-6 py-4 border-t border-[#2a2a2a]">
-        <span className="font-sans text-[13px] text-[#8a8a8a]">
-          Showing 1–4 of 4
-        </span>
-        <div className="flex items-center gap-4">
-          <button className="font-sans text-[13px] text-[#4a4a4a] cursor-not-allowed outline-none">
-            ← Previous
-          </button>
-          <button className="font-sans text-[13px] text-[#8a8a8a] hover:text-[#d4a84b] transition-colors outline-none">
-            Next →
-          </button>
+        <div className="flex items-center justify-between px-6 py-4 border-t border-[#2a2a2a]">
+          <span className="font-sans text-[13px] text-[#8a8a8a]">Showing {secrets.length} secret{secrets.length === 1 ? "" : "s"}</span>
         </div>
       </div>
-    </div>
+    </>
   );
 }

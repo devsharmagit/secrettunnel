@@ -27,7 +27,7 @@ export async function AppHeader({ maxWidthClass = "max-w-[640px]", session }: Ap
         <nav className="flex items-center gap-4">
           <Link
             className="text-[#8a8a8a] transition-colors hover:text-[#d4a84b]"
-            href="https://github.com/devsharma"
+            href="https://github.com/devsharmagit"
             target="_blank"
           >
             <Github className="size-4.5" />
