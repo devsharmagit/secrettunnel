@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { importKey, applyPasswordLayer, decrypt } from "@/lib/crypto";
+import { importKey, applyPasswordLayer, decrypt } from "@repo/encryption";
 import Link from "next/link";
 
 interface SecretViewerProps {
