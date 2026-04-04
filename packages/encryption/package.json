@@ -1,6 +1,9 @@
 {
   "name": "@repo/encryption",
   "module": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "type": "module",
   "version": "0.0.0",
   "private": true,
@@ -12,6 +15,6 @@
     "typescript": "^5"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "check-types": "tsc --noEmit"
   }
 }

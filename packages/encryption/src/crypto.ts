@@ -24,7 +24,12 @@ function toArrayBuffer(buffer: ArrayBufferLike): ArrayBuffer {
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = "";
   for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
+    const byte = bytes[i];
+    if (byte === undefined) {
+      continue;
+    }
+
+    binary += String.fromCharCode(byte);
   }
 
   if (typeof btoa === "function") {
@@ -74,7 +79,13 @@ function xorBuffers(a: ArrayBuffer, b: ArrayBuffer): ArrayBuffer {
 
   const result = new Uint8Array(aBytes.length);
   for (let i = 0; i < aBytes.length; i++) {
-    result[i] = aBytes[i] ^ bBytes[i];
+    const aByte = aBytes[i];
+    const bByte = bBytes[i];
+    if (aByte === undefined || bByte === undefined) {
+      continue;
+    }
+
+    result[i] = aByte ^ bByte;
   }
 
   return result.buffer;

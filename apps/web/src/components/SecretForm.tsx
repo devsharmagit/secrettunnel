@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
-import { generateKey, generateSalt, applyPasswordLayer, encrypt, exportKey } from "@/lib/crypto";
+import { generateKey, generateSalt, applyPasswordLayer, encrypt, exportKey } from "@repo/encryption";
 
 export function SecretForm() {
   const [content, setContent] = useState("");
