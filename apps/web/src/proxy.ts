@@ -4,8 +4,9 @@ import { getToken } from "next-auth/jwt";
 import { applySecretsPostRateLimit } from "@/lib/rate-limit";
 
 const authPagePaths = new Set(["/signin", "/signup"]);
+type GetTokenRequest = NonNullable<Parameters<typeof getToken>[0]>["req"];
 
-export async function proxy(request: NextRequest) {
+export async function proxy(request :NextRequest ) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-proxy-active", "1");
 
@@ -30,7 +31,8 @@ export async function proxy(request: NextRequest) {
   }
 
   const token = await getToken({
-    req: request,
+    // In monorepos, duplicated `next` installs can make `NextRequest` nominally incompatible.
+    req: request as unknown as GetTokenRequest,
     secret: process.env.NEXTAUTH_SECRET,
   });
 

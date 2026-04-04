@@ -11,10 +11,14 @@
     },
     "apps/cli": {
       "name": "@repo/cli",
+      "bin": {
+        "secrettunnel": "dist/index.js",
+      },
       "devDependencies": {
         "@repo/eslint-config": "*",
         "@repo/typescript-config": "*",
         "@types/bun": "latest",
+        "@types/node": "^25.5.2",
         "eslint": "^9",
         "typescript": "^5",
       },

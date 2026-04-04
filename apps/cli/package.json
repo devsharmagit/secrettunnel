@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun --watch index.ts",
+    "dev": "bun --watch src/index.ts",
     "build": "bunx tsc -p tsconfig.json",
     "start": "bun index.ts",
     "lint": "eslint . --max-warnings 0"
@@ -13,10 +13,14 @@
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "@types/bun": "latest",
+     "@types/node": "^25.5.2",
     "eslint": "^9",
     "typescript": "^5"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "bin": {
+    "secrettunnel": "dist/index.js"
   }
 }
