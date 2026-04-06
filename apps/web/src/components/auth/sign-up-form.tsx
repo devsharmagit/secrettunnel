@@ -26,7 +26,11 @@ const signUpSchema = z
 
 type SignUpFormValues = z.infer<typeof signUpSchema>;
 
-export function SignUpForm() {
+type SignUpFormProps = {
+  callbackUrl?: string;
+};
+
+export function SignUpForm({ callbackUrl = "/dashboard" }: SignUpFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const {
@@ -69,7 +73,7 @@ export function SignUpForm() {
       email: values.email,
       password: values.password,
       redirect: false,
-      callbackUrl: "/dashboard",
+      callbackUrl,
     });
 
     if (!result || result.error) {
@@ -77,7 +81,7 @@ export function SignUpForm() {
       return;
     }
 
-    router.push(result.url ?? "/dashboard");
+    router.push(result.url ?? callbackUrl);
     router.refresh();
   }
 

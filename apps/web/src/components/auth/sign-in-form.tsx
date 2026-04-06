@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Github, KeyRound } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -19,9 +19,12 @@ const signInSchema = z.object({
 
 type SignInFormValues = z.infer<typeof signInSchema>;
 
-export function SignInForm() {
+type SignInFormProps = {
+  callbackUrl?: string;
+};
+
+export function SignInForm({ callbackUrl = "/dashboard" }: SignInFormProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const {
     register,
@@ -38,7 +41,6 @@ export function SignInForm() {
   async function onSubmit(values: SignInFormValues) {
     setError(null);
 
-    const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
     const result = await signIn("credentials", {
       email: values.email,
       password: values.password,
@@ -104,7 +106,7 @@ export function SignInForm() {
         className="h-10 w-full border-amber-800/20 text-zinc-900 hover:bg-amber-50"
         type="button"
         variant="outline"
-        onClick={() => signIn("github", { callbackUrl: "/dashboard" })}
+        onClick={() => signIn("github", { callbackUrl })}
       >
         <Github className="mr-1 size-4" />
         Continue with GitHub
