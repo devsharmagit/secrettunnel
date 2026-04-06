@@ -18,12 +18,8 @@ export default async function Page({ searchParams }: SignInPageProps) {
   const callbackUrl = toSingleParam(resolvedSearchParams.callbackUrl) ?? "/dashboard";
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-lg border bg-white p-6 shadow-sm">
-        <h1 className="mb-1 text-xl font-semibold text-zinc-900">Welcome back</h1>
-        <p className="mb-6 text-sm text-zinc-600">Sign in to continue to your dashboard.</p>
+    
         <SignInForm callbackUrl={callbackUrl} />
-      </div>
-    </main>
+    
   );
 }

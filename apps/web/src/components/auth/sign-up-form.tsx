@@ -1,54 +1,45 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { Eye, EyeOff, Github } from "lucide-react";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-
-const signUpSchema = z
-  .object({
-    name: z.string().trim().min(2, "Name must be at least 2 characters."),
-    email: z.string().trim().email("Enter a valid email address."),
-    password: z.string().min(6, "Password must be at least 6 characters."),
-    confirmPassword: z.string().min(6, "Confirm your password."),
-  })
-  .refine((values) => values.password === values.confirmPassword, {
-    path: ["confirmPassword"],
-    message: "Passwords do not match.",
-  });
-
-type SignUpFormValues = z.infer<typeof signUpSchema>;
-
-type SignUpFormProps = {
-  callbackUrl?: string;
-};
-
-export function SignUpForm({ callbackUrl = "/dashboard" }: SignUpFormProps) {
+export function SignUpPage({callbackUrl}:{callbackUrl: string}) {
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<SignUpFormValues>({
-    resolver: zodResolver(signUpSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
-  });
 
-  async function onSubmit(values: SignUpFormValues) {
+  const calculateStrength = (pwd: string) => {
+    let score = 0;
+    if (pwd.length > 0) score += 1;
+    if (pwd.length >= 8) score += 1;
+    if (/[A-Z]/.test(pwd) && /[0-9]/.test(pwd)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pwd)) score += 1;
+    return score;
+  };
+
+  const strength = calculateStrength(password);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const name = String(formData.get("name") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const pwd = String(formData.get("password") ?? "");
+    const confirmPassword = String(formData.get("confirm-password") ?? "");
+
+    if (pwd !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setIsSubmitting(true);
 
     const response = await fetch("/api/auth/signup", {
       method: "POST",
@@ -56,9 +47,9 @@ export function SignUpForm({ callbackUrl = "/dashboard" }: SignUpFormProps) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        name: values.name,
-        email: values.email,
-        password: values.password,
+        name,
+        email,
+        password: pwd,
       }),
     });
 
@@ -66,107 +57,165 @@ export function SignUpForm({ callbackUrl = "/dashboard" }: SignUpFormProps) {
 
     if (!response.ok) {
       setError(data.error ?? "Unable to create account.");
+      setIsSubmitting(false);
       return;
     }
 
     const result = await signIn("credentials", {
-      email: values.email,
-      password: values.password,
+      email,
+      password: pwd,
       redirect: false,
       callbackUrl,
     });
 
     if (!result || result.error) {
       setError("Account created, but automatic sign in failed.");
+      setIsSubmitting(false);
       return;
     }
 
     router.push(result.url ?? callbackUrl);
     router.refresh();
-  }
+  };
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-zinc-800" htmlFor="name">
-          Name
-        </label>
-        <Input
-          id="name"
-          autoComplete="name"
-          placeholder="Jane Doe"
-          {...register("name")}
-          aria-invalid={Boolean(errors.name)}
-          className="h-10 border-zinc-300/80 bg-white"
-        />
-        {errors.name ? <p className="text-sm text-destructive">{errors.name.message}</p> : null}
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-zinc-800" htmlFor="email">
-          Email
-        </label>
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          placeholder="you@company.com"
-          {...register("email")}
-          aria-invalid={Boolean(errors.email)}
-          className="h-10 border-zinc-300/80 bg-white"
-        />
-        {errors.email ? <p className="text-sm text-destructive">{errors.email.message}</p> : null}
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-zinc-800" htmlFor="password">
-          Password
-        </label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="new-password"
-          placeholder="At least 6 characters"
-          {...register("password")}
-          aria-invalid={Boolean(errors.password)}
-          className="h-10 border-zinc-300/80 bg-white"
-        />
-        {errors.password ? (
-          <p className="text-sm text-destructive">{errors.password.message}</p>
-        ) : null}
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-zinc-800" htmlFor="confirmPassword">
-          Confirm password
-        </label>
-        <Input
-          id="confirmPassword"
-          type="password"
-          autoComplete="new-password"
-          placeholder="Re-enter password"
-          {...register("confirmPassword")}
-          aria-invalid={Boolean(errors.confirmPassword)}
-          className="h-10 border-zinc-300/80 bg-white"
-        />
-        {errors.confirmPassword ? (
-          <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
-        ) : null}
-      </div>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+    <main className="min-h-screen flex items-center justify-center p-4 py-8">
+      <div className="w-full max-w-100 bg-[#161616] border border-[#2a2a2a] rounded-sm p-8 shadow-none my-auto">
+        <div className="flex flex-col items-center mb-8">
+          <h1 className="font-sans font-semibold text-[18px] text-[#f0ece4] mb-2 flex items-center gap-1.5">
+            <span className="text-[#d4a84b]">{"//"}</span> SecretTunnel
+          </h1>
+          <p className="font-sans text-[13px] text-[#8a8a8a] text-center">
+            Create an account to track and manage your secrets.
+          </p>
+        </div>
 
-      <Button
-        className="h-10 w-full bg-amber-900 text-amber-50 hover:bg-amber-800"
-        type="submit"
-        disabled={isSubmitting}
-      >
-        <UserPlus className="mr-1 size-4" />
-        {isSubmitting ? "Creating account..." : "Create account"}
-      </Button>
+        <button
+          type="button"
+          onClick={() => signIn("github", { callbackUrl })}
+          className="w-full h-11 flex items-center justify-center gap-2 bg-[#1f1f1f] border border-[#2a2a2a] rounded-sm hover:border-[#d4a84b] transition-colors outline-none mb-6"
+        >
+          <Github className="size-4 text-[#f0ece4]" />
+          <span className="font-sans font-medium text-[14px] text-[#f0ece4]">Continue with GitHub</span>
+        </button>
 
-      <p className="text-sm text-muted-foreground">
-        Already have an account?{" "}
-        <Link className="font-medium text-amber-900 underline underline-offset-2" href="/signin">
-          Sign in
-        </Link>
-      </p>
-    </form>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex-1 h-px bg-[#2a2a2a]" />
+          <span className="font-sans text-[11px] text-[#4a4a4a]">or</span>
+          <div className="flex-1 h-px bg-[#2a2a2a]" />
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="name" className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a]">
+              Full name
+            </label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              required
+              placeholder="Jane Doe"
+              className="w-full h-10 bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="email" className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a]">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="name@example.com"
+              className="w-full h-10 bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="password" className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a]">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full h-10 bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 pr-10 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a4a4a] hover:text-[#8a8a8a] transition-colors outline-none"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+              </button>
+            </div>
+
+            {password.length > 0 && (
+              <div className="flex gap-1 mt-1">
+                {[1, 2, 3, 4].map((level) => {
+                  let bgColor = "bg-[#2a2a2a]";
+                  if (strength >= level) {
+                    if (strength === 1) bgColor = "bg-[#b33a3a]";
+                    else if (strength === 2) bgColor = "bg-[#8a6a2a]";
+                    else if (strength === 3) bgColor = "bg-[#d4a84b]";
+                    else if (strength === 4) bgColor = "bg-[#4a7c59]";
+                  }
+                  return (
+                    <div
+                      key={level}
+                      className={`flex-1 h-0.75 rounded-full transition-colors ${bgColor}`}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="confirm-password" className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a]">
+              Confirm password
+            </label>
+            <input
+              id="confirm-password"
+              name="confirm-password"
+              type="password"
+              required
+              minLength={6}
+              placeholder="••••••••"
+              className="w-full h-10 bg-[#0c0c0c] border border-[#2a2a2a] rounded-sm px-3 font-sans text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
+            />
+          </div>
+
+          {error ? <p className="font-sans text-[12px] text-[#b33a3a]">{error}</p> : null}
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full h-11 bg-[#d4a84b] text-[#0c0c0c] font-sans font-semibold text-[14px] rounded-sm hover:bg-[#e8bf6a] transition-colors outline-none disabled:opacity-50 flex items-center justify-center mt-2"
+          >
+            {isSubmitting ? <span className="font-mono animate-pulse">Creating...</span> : "Create Account"}
+          </button>
+        </form>
+
+        <div className="mt-6 flex flex-col items-center gap-3">
+          <p className="font-sans text-[13px] text-[#8a8a8a]">
+            Already have an account?{" "}
+            <Link href="/signin" className="text-[#d4a84b] hover:text-[#e8bf6a] outline-none transition-colors">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
+    </main>
   );
 }
