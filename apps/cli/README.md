@@ -41,8 +41,8 @@ Make sure the web app is running before using CLI commands.
 
 ```bash
 bun src/index.ts push <content> [--ttl <duration>] [--file <path>] [--password <value>]
-bun src/index.ts pull <share-url>
-bun src/index.ts pull <token> --key <base64Key> [--password <value>]
+bun src/index.ts pull <share-url> [--password <value>] [--output <path|->]
+bun src/index.ts pull <token> --key <base64Key> [--password <value>] [--output <path|->]
 ```
 
 `--ttl` accepts either:
@@ -128,6 +128,22 @@ You can also provide it directly:
 
 ```bash
 bun src/index.ts pull "http://localhost:3000/s/abc123#key=base64EncodedKey" --password mypass123
+```
+
+### Pull secret directly to file
+
+```bash
+bun src/index.ts pull "http://localhost:3000/s/abc123#key=base64EncodedKey" --output .env
+```
+
+If the output file already exists, CLI asks for confirmation before overwriting it.
+
+### Explicit stdout output
+
+Use `--output -` to force plaintext output to stdout.
+
+```bash
+bun src/index.ts pull "http://localhost:3000/s/abc123#key=base64EncodedKey" --output -
 ```
 
 ## Behavior Notes

@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
 import { generateKey, generateSalt, applyPasswordLayer, decrypt, encrypt, exportKey, importKey } from "@repo/encryption";
-import { readFileSync } from "fs";
-import { createInterface, Interface } from "readline/promises";
+import { existsSync, readFileSync, writeFileSync } from "fs";
+import { createInterface, type Interface } from "readline/promises";
 import { stdin as input, stdout as output } from "process";
 import axios from "axios";
 import ora from "ora";
 
 const DEFAULT_BASE_URL =
   process.env.NODE_ENV === "production"
-    ? "https://api.woirohs.com" // to be change
+    ? "https://api.woirohs.com"
     : "http://localhost:3000";
 const API_URL = (process.env.SECRETTUNNEL_API_URL || process.env.API_URL || `${DEFAULT_BASE_URL}/api/secrets`).replace(/\/+$/, "");
 const SHARE_BASE_URL = (() => {
@@ -33,6 +33,7 @@ interface PullArgs {
   reference: string | null;
   key: string | null;
   password: string | null;
+  outputPath: string | null;
 }
 
 interface SecretReference {
@@ -50,31 +51,13 @@ function printUsage() {
   console.log("Usage:");
   console.log("  secrettunnel push 'your secret message' [--ttl 24h] [--file path] [--password value]");
   console.log("    --ttl supports seconds or 1m|1h|7d style values (default: 24h)");
-  console.log("  secrettunnel pull '<share-url-with-key>'");
-  console.log("  secrettunnel pull <token> --key <base64Key> [--password value]");
+  console.log("  secrettunnel pull '<share-url-with-key>' [--password value] [--output <path|->]");
+  console.log("  secrettunnel pull <token> --key <base64Key> [--password value] [--output <path|->]");
 }
 
 function exitWithError(message: string): never {
   console.error(`\n❌ ${message}`);
   process.exit(1);
-}
-
-async function withTimeout<T>(promise: Promise<T>, label: string, timeoutMs = STEP_TIMEOUT_MS): Promise<T> {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new Error(`${label} timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-  });
-
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-  }
 }
 
 function isSecretPayload(value: unknown): value is SecretPayload {
@@ -85,8 +68,7 @@ function isSecretPayload(value: unknown): value is SecretPayload {
   const payload = value as Record<string, unknown>;
   const hasCiphertext = typeof payload.ciphertext === "string";
   const hasIv = typeof payload.iv === "string";
-  const hasValidPasswordHash =
-    payload.passwordHash === undefined || typeof payload.passwordHash === "string";
+  const hasValidPasswordHash = payload.passwordHash === undefined || typeof payload.passwordHash === "string";
 
   return hasCiphertext && hasIv && hasValidPasswordHash;
 }
@@ -149,7 +131,6 @@ function parsePushArgs(args: string[]): PushArgs {
       }
 
       ttl = parseTtlToSeconds(ttlStr);
-
       i++;
       continue;
     }
@@ -179,6 +160,7 @@ function parsePullArgs(args: string[]): PullArgs {
   let reference: string | null = null;
   let key: string | null = null;
   let password: string | null = null;
+  let outputPath: string | null = null;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -206,6 +188,17 @@ function parsePullArgs(args: string[]): PullArgs {
       continue;
     }
 
+    if (arg === "--output") {
+      const next = args[i + 1];
+      if (!next || next.startsWith("--")) {
+        exitWithError("Missing value for --output");
+      }
+
+      outputPath = next;
+      i++;
+      continue;
+    }
+
     if (arg.startsWith("--")) {
       exitWithError(`Unknown option for pull command: ${arg}`);
     }
@@ -217,7 +210,7 @@ function parsePullArgs(args: string[]): PullArgs {
     reference = arg;
   }
 
-  return { reference, key, password };
+  return { reference, key, password, outputPath };
 }
 
 function parseSecretReference(reference: string, keyOverride: string | null): SecretReference {
@@ -258,7 +251,45 @@ function parseSecretReference(reference: string, keyOverride: string | null): Se
   return { token, key: finalKey };
 }
 
-// Read content from file or direct argument
+function sanitizeServerMessage(message: string): string {
+  return message
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+    .slice(0, 240);
+}
+
+function getAxiosErrorMessage(error: unknown): string {
+  if (!axios.isAxiosError(error)) {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  const status = error.response?.status;
+
+  if (status === 404) {
+    return "Secret not found. It may have expired or already been viewed.";
+  }
+
+  if (error.code === "ECONNABORTED") {
+    return "Request timed out while contacting server";
+  }
+
+  if (status && status >= 500) {
+    return "Server error. Please try again later.";
+  }
+
+  const responseMessage = typeof error.response?.data?.message === "string" ? error.response.data.message : null;
+  if (responseMessage) {
+    return sanitizeServerMessage(responseMessage);
+  }
+
+  if (status && status >= 400) {
+    return `Request failed with status ${status}`;
+  }
+
+  return "Request failed. Please try again.";
+}
+
 async function getContent(args: PushArgs): Promise<string> {
   if (args.filePath) {
     try {
@@ -275,48 +306,28 @@ async function getContent(args: PushArgs): Promise<string> {
   exitWithError("No content provided for push command");
 }
 
-async function promptForOptionalPassword(rl : Interface): Promise<string | null> {
-
-    const answer = await rl.question("Enter a password (or press Enter to skip): ");
-    return answer.length > 0 ? answer : null;
-  
+async function promptForOptionalPassword(rl: Interface): Promise<string | null> {
+  const answer = await rl.question("Enter a password (or press Enter to skip): ");
+  return answer.length > 0 ? answer : null;
 }
 
-async function promptForRequiredPassword(rl : Interface): Promise<string> {
-
-    while (true) {
-      const answer = await rl.question("Enter secret password: ");
-      if (answer.length > 0) {
-        return answer;
-      }
-      console.error("Password cannot be empty for this secret.");
+async function promptForRequiredPassword(rl: Interface): Promise<string> {
+  while (true) {
+    const answer = await rl.question("Enter secret password: ");
+    if (answer.length > 0) {
+      return answer;
     }
-  
+    console.error("Password cannot be empty for this secret.");
+  }
 }
 
-function getAxiosErrorMessage(error: unknown): string {
-  if (!axios.isAxiosError(error)) {
-    return error instanceof Error ? error.message : String(error);
-  }
+async function confirmOverwrite(rl: Interface, filePath: string): Promise<boolean> {
+  const answer = await rl.question(
+    `⚠️ ${filePath} already exists. Everything will be deleted and replaced. Continue? (y/N): `,
+  );
 
-  const responseMessage =
-    typeof error.response?.data?.message === "string"
-      ? error.response.data.message
-      : null;
-
-  if (responseMessage) {
-    return responseMessage;
-  }
-
-  if (error.response?.status === 404) {
-    return "Secret not found. It may have expired or already been viewed.";
-  }
-
-  if (error.code === "ECONNABORTED") {
-    return "Request timed out while contacting server";
-  }
-
-  return error.message;
+  const normalized = answer.trim().toLowerCase();
+  return normalized === "y" || normalized === "yes";
 }
 
 async function fetchSecret(token: string): Promise<SecretPayload> {
@@ -336,12 +347,8 @@ async function fetchSecret(token: string): Promise<SecretPayload> {
   }
 }
 
-async function decryptSecret(
-  data: SecretPayload,
-  keyBase64: string,
-  password?: string,
-): Promise<string> {
-  const baseKey = await withTimeout(importKey(keyBase64), "Key import");
+async function decryptSecret(data: SecretPayload, keyBase64: string, password?: string): Promise<string> {
+  const baseKey = await importKey(keyBase64);
   let keyToUse = baseKey;
 
   if (data.passwordHash) {
@@ -349,34 +356,30 @@ async function decryptSecret(
       throw new Error("Password required for this secret");
     }
 
-    keyToUse = await withTimeout(
-      applyPasswordLayer(baseKey, password, data.passwordHash),
-      "Password protection",
-    );
+    keyToUse = await applyPasswordLayer(baseKey, password, data.passwordHash);
   }
 
-  return withTimeout(decrypt(data.ciphertext, data.iv, keyToUse), "Decryption");
+  return decrypt(data.ciphertext, data.iv, keyToUse);
 }
 
-// Main encryption and submission flow
 async function handlePush(content: string, password: string | null, ttl: number) {
   const spinner = ora("Encrypting secret...").start();
 
   try {
-    const baseKey = await withTimeout(generateKey(), "Key generation");
+    const baseKey = await generateKey();
     let keyToUse = baseKey;
     let saltForServer: string | undefined = undefined;
 
     if (password) {
       spinner.text = "Applying password protection...";
       const salt = generateSalt();
-      keyToUse = await withTimeout(applyPasswordLayer(baseKey, password, salt), "Password protection");
+      keyToUse = await applyPasswordLayer(baseKey, password, salt);
       saltForServer = salt;
     }
 
     spinner.text = "Encrypting secret...";
-    const { ciphertext, iv } = await withTimeout(encrypt(content, keyToUse), "Encryption");
-    const exportedKeyBase64 = await withTimeout(exportKey(baseKey), "Key export");
+    const { ciphertext, iv } = await encrypt(content, keyToUse);
+    const exportedKeyBase64 = await exportKey(baseKey);
 
     spinner.text = "Sending to server...";
 
@@ -409,13 +412,25 @@ async function handlePush(content: string, password: string | null, ttl: number)
   }
 }
 
-async function handlePull(reference: string, keyOverride: string | null, initialPassword: string | null, rl: Interface) {
+async function handlePull(
+  reference: string,
+  keyOverride: string | null,
+  initialPassword: string | null,
+  outputPath: string | null,
+  rl: Interface,
+) {
   try {
     const { token, key } = parseSecretReference(reference, keyOverride);
 
     const fetchSpinner = ora("Fetching secret...").start();
-    const encryptedData = await fetchSecret(token);
-    fetchSpinner.succeed("Secret fetched");
+    let encryptedData: SecretPayload;
+    try {
+      encryptedData = await fetchSecret(token);
+      fetchSpinner.succeed("Secret fetched");
+    } catch (error) {
+      fetchSpinner.fail("Failed to fetch secret");
+      throw error;
+    }
 
     let plaintext: string | null = null;
 
@@ -446,12 +461,31 @@ async function handlePull(reference: string, keyOverride: string | null, initial
       }
     } else {
       const decryptSpinner = ora("Decrypting secret...").start();
-      plaintext = await decryptSecret(encryptedData, key);
-      decryptSpinner.succeed("Secret decrypted");
+      try {
+        plaintext = await decryptSecret(encryptedData, key);
+        decryptSpinner.succeed("Secret decrypted");
+      } catch (error) {
+        decryptSpinner.fail("Failed to decrypt secret");
+        throw error;
+      }
     }
 
     if (plaintext === null) {
       throw new Error("Failed to decrypt secret");
+    }
+
+    if (outputPath && outputPath !== "-") {
+      if (existsSync(outputPath)) {
+        const shouldOverwrite = await confirmOverwrite(rl, outputPath);
+        if (!shouldOverwrite) {
+          console.log("\nℹ️ Aborted. Existing file was not modified.\n");
+          return;
+        }
+      }
+
+      writeFileSync(outputPath, plaintext, "utf-8");
+      console.log(`\n✅ Secret written to ${outputPath}\n`);
+      return;
     }
 
     console.log("\n✅ Secret decrypted successfully!\n");
@@ -463,7 +497,6 @@ async function handlePull(reference: string, keyOverride: string | null, initial
   }
 }
 
-// Main entry point
 async function main() {
   const argv = process.argv.slice(2);
 
@@ -473,34 +506,38 @@ async function main() {
   }
 
   const command = argv[0];
-   const rl = createInterface({ input, output });
+  const rl = createInterface({ input, output });
 
-  if (command === "push") {
-    const args = parsePushArgs(argv.slice(1));
-    const content = await getContent(args);
+  try {
+    if (command === "push") {
+      const args = parsePushArgs(argv.slice(1));
+      const content = await getContent(args);
 
-    let password = args.password;
-    if (!password) {
-      password = await promptForOptionalPassword(rl);
+      let password = args.password;
+      if (!password) {
+        password = await promptForOptionalPassword(rl);
+      }
+
+      await handlePush(content, password, args.ttl);
+      return;
     }
 
-    await handlePush(content, password, args.ttl);
-    return;
-  }
+    if (command === "pull") {
+      const args = parsePullArgs(argv.slice(1));
 
-  if (command === "pull") {
-    const args = parsePullArgs(argv.slice(1));
+      if (!args.reference) {
+        exitWithError("Missing token or URL for pull command");
+      }
 
-    if (!args.reference) {
-      exitWithError("Missing token or URL for pull command");
+      await handlePull(args.reference, args.key, args.password, args.outputPath, rl);
+      return;
     }
 
-    await handlePull(args.reference, args.key, args.password, rl);
-    return;
+    printUsage();
+    exitWithError(`Unknown command: ${command}. Use push or pull.`);
+  } finally {
+    rl.close();
   }
-  rl.close();
-  printUsage();
-  exitWithError(`Unknown command: ${command}. Use push or pull.`);
 }
 
 main();
