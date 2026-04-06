@@ -24,7 +24,8 @@
     "secrettunnel": "dist/index.js"
   },
   "dependencies": {
+    "@repo/encryption": "workspace:*",
     "axios": "^1.14.0",
-    "@repo/encryption": "workspace:*"
+    "ora": "^9.3.0"
   }
 }

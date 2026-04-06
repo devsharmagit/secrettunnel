@@ -40,10 +40,17 @@ Make sure the web app is running before using CLI commands.
 ## Command Summary
 
 ```bash
-bun src/index.ts push <content> [--ttl <seconds>] [--file <path>] [--password <value>]
+bun src/index.ts push <content> [--ttl <duration>] [--file <path>] [--password <value>]
 bun src/index.ts pull <share-url>
 bun src/index.ts pull <token> --key <base64Key> [--password <value>]
 ```
+
+`--ttl` accepts either:
+
+1. Raw seconds (example: `3600`)
+2. Human-readable values using `s|m|h|d` (examples: `30m`, `1h`, `7d`)
+
+Default TTL is `24h`.
 
 Important: Command is required. Running bun src/index.ts "message" will fail. Use push or pull explicitly.
 
@@ -68,7 +75,7 @@ bun src/index.ts push --file .env
 ### Push with custom TTL
 
 ```bash
-bun src/index.ts push "temporary secret" --ttl 3600
+bun src/index.ts push "temporary secret" --ttl 1h
 ```
 
 ### Push with explicit password

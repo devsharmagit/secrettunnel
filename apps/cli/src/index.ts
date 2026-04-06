@@ -2,9 +2,10 @@
 
 import { generateKey, generateSalt, applyPasswordLayer, decrypt, encrypt, exportKey, importKey } from "@repo/encryption";
 import { readFileSync } from "fs";
-import { createInterface } from "readline/promises";
+import { createInterface, Interface } from "readline/promises";
 import { stdin as input, stdout as output } from "process";
 import axios from "axios";
+import ora from "ora";
 
 const DEFAULT_BASE_URL =
   process.env.NODE_ENV === "production"
@@ -18,7 +19,7 @@ const SHARE_BASE_URL = (() => {
     return DEFAULT_BASE_URL;
   }
 })();
-const DEFAULT_TTL = 10000000;
+const DEFAULT_TTL_SECONDS = 24 * 60 * 60;
 const STEP_TIMEOUT_MS = 20000;
 
 interface PushArgs {
@@ -47,7 +48,8 @@ interface SecretPayload {
 
 function printUsage() {
   console.log("Usage:");
-  console.log("  secrettunnel push 'your secret message' [--ttl 3600] [--file path] [--password value]");
+  console.log("  secrettunnel push 'your secret message' [--ttl 24h] [--file path] [--password value]");
+  console.log("    --ttl supports seconds or 1m|1h|7d style values (default: 24h)");
   console.log("  secrettunnel pull '<share-url-with-key>'");
   console.log("  secrettunnel pull <token> --key <base64Key> [--password value]");
 }
@@ -89,10 +91,40 @@ function isSecretPayload(value: unknown): value is SecretPayload {
   return hasCiphertext && hasIv && hasValidPasswordHash;
 }
 
+function parseTtlToSeconds(value: string): number {
+  const inputValue = value.trim().toLowerCase();
+  const matched = inputValue.match(/^(\d+)([smhd])?$/);
+
+  if (!matched) {
+    exitWithError("Invalid --ttl value. Use seconds (e.g. 3600) or duration format like 30m, 1h, 7d");
+  }
+
+  const amount = Number.parseInt(matched[1] ?? "", 10);
+  const unit = matched[2] ?? "s";
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    exitWithError("--ttl must be a positive value");
+  }
+
+  const multipliers: Record<string, number> = {
+    s: 1,
+    m: 60,
+    h: 60 * 60,
+    d: 24 * 60 * 60,
+  };
+
+  const multiplier = multipliers[unit];
+  if (!multiplier) {
+    exitWithError("Invalid --ttl unit. Use s, m, h, or d");
+  }
+
+  return amount * multiplier;
+}
+
 function parsePushArgs(args: string[]): PushArgs {
   let content: string | null = null;
   let filePath: string | null = null;
-  let ttl = DEFAULT_TTL;
+  let ttl = DEFAULT_TTL_SECONDS;
   let password: string | null = null;
 
   for (let i = 0; i < args.length; i++) {
@@ -116,10 +148,7 @@ function parsePushArgs(args: string[]): PushArgs {
         exitWithError("Missing value for --ttl");
       }
 
-      ttl = parseInt(ttlStr, 10);
-      if (isNaN(ttl) || ttl <= 0) {
-        exitWithError("--ttl must be a positive number");
-      }
+      ttl = parseTtlToSeconds(ttlStr);
 
       i++;
       continue;
@@ -246,32 +275,23 @@ async function getContent(args: PushArgs): Promise<string> {
   exitWithError("No content provided for push command");
 }
 
-async function promptForOptionalPassword(): Promise<string | null> {
-  const rl = createInterface({ input, output });
+async function promptForOptionalPassword(rl : Interface): Promise<string | null> {
 
-  try {
     const answer = await rl.question("Enter a password (or press Enter to skip): ");
     return answer.length > 0 ? answer : null;
-  } finally {
-    rl.close();
-  }
+  
 }
 
-async function promptForRequiredPassword(): Promise<string> {
-  while (true) {
-    const rl = createInterface({ input, output });
+async function promptForRequiredPassword(rl : Interface): Promise<string> {
 
-    try {
+    while (true) {
       const answer = await rl.question("Enter secret password: ");
       if (answer.length > 0) {
         return answer;
       }
-    } finally {
-      rl.close();
+      console.error("Password cannot be empty for this secret.");
     }
-
-    console.error("Password cannot be empty for this secret.");
-  }
+  
 }
 
 function getAxiosErrorMessage(error: unknown): string {
@@ -340,24 +360,25 @@ async function decryptSecret(
 
 // Main encryption and submission flow
 async function handlePush(content: string, password: string | null, ttl: number) {
-  try {
-    console.log("\n🔐 Encrypting secret...");
+  const spinner = ora("Encrypting secret...").start();
 
+  try {
     const baseKey = await withTimeout(generateKey(), "Key generation");
     let keyToUse = baseKey;
     let saltForServer: string | undefined = undefined;
 
     if (password) {
-      console.log("🔑 Applying password protection...");
+      spinner.text = "Applying password protection...";
       const salt = generateSalt();
       keyToUse = await withTimeout(applyPasswordLayer(baseKey, password, salt), "Password protection");
       saltForServer = salt;
     }
 
+    spinner.text = "Encrypting secret...";
     const { ciphertext, iv } = await withTimeout(encrypt(content, keyToUse), "Encryption");
     const exportedKeyBase64 = await withTimeout(exportKey(baseKey), "Key export");
 
-    console.log("📤 Sending to server...");
+    spinner.text = "Sending to server...";
 
     const res = await axios.post(
       API_URL,
@@ -377,24 +398,24 @@ async function handlePush(content: string, password: string | null, ttl: number)
 
     const url = `${SHARE_BASE_URL}/s/${token}#key=${encodeURIComponent(exportedKeyBase64)}`;
 
-    console.log("\n✅ Secret created successfully!\n");
+    spinner.succeed("Secret created successfully!");
     console.log("🔗 Share this link:\n");
     console.log(url);
     console.log("\n");
   } catch (error) {
+    spinner.fail("Failed to create secret");
     console.error("\n❌ Error:", getAxiosErrorMessage(error));
     process.exit(1);
   }
 }
 
-async function handlePull(reference: string, keyOverride: string | null, initialPassword: string | null) {
+async function handlePull(reference: string, keyOverride: string | null, initialPassword: string | null, rl: Interface) {
   try {
     const { token, key } = parseSecretReference(reference, keyOverride);
 
-    console.log("\n📥 Fetching secret...");
+    const fetchSpinner = ora("Fetching secret...").start();
     const encryptedData = await fetchSecret(token);
-
-    console.log("🔓 Decrypting secret...");
+    fetchSpinner.succeed("Secret fetched");
 
     let plaintext: string | null = null;
 
@@ -404,13 +425,16 @@ async function handlePull(reference: string, keyOverride: string | null, initial
 
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         if (!currentPassword) {
-          currentPassword = await promptForRequiredPassword();
+          currentPassword = await promptForRequiredPassword(rl);
         }
 
+        const decryptSpinner = ora("Decrypting secret...").start();
         try {
           plaintext = await decryptSecret(encryptedData, key, currentPassword);
+          decryptSpinner.succeed("Secret decrypted");
           break;
         } catch {
+          decryptSpinner.fail("Failed to decrypt secret");
           if (attempt < maxAttempts && !initialPassword) {
             console.error("Incorrect password. Please try again.");
             currentPassword = null;
@@ -421,7 +445,9 @@ async function handlePull(reference: string, keyOverride: string | null, initial
         }
       }
     } else {
+      const decryptSpinner = ora("Decrypting secret...").start();
       plaintext = await decryptSecret(encryptedData, key);
+      decryptSpinner.succeed("Secret decrypted");
     }
 
     if (plaintext === null) {
@@ -447,6 +473,7 @@ async function main() {
   }
 
   const command = argv[0];
+   const rl = createInterface({ input, output });
 
   if (command === "push") {
     const args = parsePushArgs(argv.slice(1));
@@ -454,7 +481,7 @@ async function main() {
 
     let password = args.password;
     if (!password) {
-      password = await promptForOptionalPassword();
+      password = await promptForOptionalPassword(rl);
     }
 
     await handlePush(content, password, args.ttl);
@@ -468,10 +495,10 @@ async function main() {
       exitWithError("Missing token or URL for pull command");
     }
 
-    await handlePull(args.reference, args.key, args.password);
+    await handlePull(args.reference, args.key, args.password, rl);
     return;
   }
-
+  rl.close();
   printUsage();
   exitWithError(`Unknown command: ${command}. Use push or pull.`);
 }
