@@ -21,7 +21,7 @@ export const config = [
       "turbo/no-undeclared-env-vars": [
         "warn",
         {
-          allowList: ["NEXTAUTH_SECRET"],
+          allowList: ["NEXTAUTH_SECRET", "NODE_ENV", "SECRETTUNNEL_API_URL", "API_URL"],
         },
       ],
     },

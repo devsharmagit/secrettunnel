@@ -1,8 +1,8 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
-  "globalEnv": ["NEXTAUTH_SECRET"],
-  "globalPassThroughEnv": ["NEXTAUTH_SECRET"],
+  "globalEnv": ["NEXTAUTH_SECRET", "NODE_ENV", "SECRETTUNNEL_API_URL", "API_URL"],
+  "globalPassThroughEnv": ["NEXTAUTH_SECRET", "NODE_ENV", "SECRETTUNNEL_API_URL", "API_URL"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

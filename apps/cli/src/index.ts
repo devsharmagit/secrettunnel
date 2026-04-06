@@ -6,7 +6,18 @@ import { createInterface } from "readline/promises";
 import { stdin as input, stdout as output } from "process";
 import axios from "axios";
 
-const API_URL = "http://localhost:3000/api/secrets";
+const DEFAULT_BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://api.woirohs.com" // to be change
+    : "http://localhost:3000";
+const API_URL = (process.env.SECRETTUNNEL_API_URL || process.env.API_URL || `${DEFAULT_BASE_URL}/api/secrets`).replace(/\/+$/, "");
+const SHARE_BASE_URL = (() => {
+  try {
+    return new URL(API_URL).origin;
+  } catch {
+    return DEFAULT_BASE_URL;
+  }
+})();
 const DEFAULT_TTL = 10000000;
 const STEP_TIMEOUT_MS = 20000;
 
@@ -364,7 +375,7 @@ async function handlePush(content: string, password: string | null, ttl: number)
       throw new Error("Server response missing token");
     }
 
-    const url = `http://localhost:3000/s/${token}#key=${encodeURIComponent(exportedKeyBase64)}`;
+    const url = `${SHARE_BASE_URL}/s/${token}#key=${encodeURIComponent(exportedKeyBase64)}`;
 
     console.log("\n✅ Secret created successfully!\n");
     console.log("🔗 Share this link:\n");
