@@ -1,14 +1,14 @@
-export const DEFAULT_BASE_URL =
-  process.env.NODE_ENV === "production"
-    ? "https://api.woirohs.com"
-    : "http://localhost:3000";
-export const API_URL = (process.env.SECRETTUNNEL_API_URL || process.env.API_URL || `${DEFAULT_BASE_URL}/api/secrets`).replace(/\/+$/, "");
-export const SHARE_BASE_URL = (() => {
-  try {
-    return new URL(API_URL).origin;
-  } catch {
-    return DEFAULT_BASE_URL;
-  }
-})();
-export const DEFAULT_TTL_SECONDS = 24 * 60 * 60;
+const BASE =
+  process.env.SECRETTUNNEL_API_URL ||
+  "https://secrettunnel.vercel.app";
+
+const clean = BASE.replace(/\/+$/, "");
+
+export const API_URL = clean.endsWith("/api/secrets")
+  ? clean
+  : `${clean}/api/secrets`;
+
+export const SHARE_BASE_URL = new URL(API_URL).origin;
+
+export const DEFAULT_TTL_SECONDS = 86400;
 export const STEP_TIMEOUT_MS = 20000;

@@ -1,31 +1,23 @@
 {
-  "name": "@repo/cli",
-  "module": "index.ts",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "build": "bunx tsc -p tsconfig.json",
-    "start": "bun index.ts",
-    "lint": "eslint . --max-warnings 0"
-  },
-  "devDependencies": {
-    "@repo/eslint-config": "*",
-    "@repo/typescript-config": "*",
-    "@types/bun": "latest",
-    "@types/node": "^25.5.2",
-    "eslint": "^9",
-    "typescript": "^5"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
+  "name": "secrettnl",
+  "version": "1.0.0",
+  "description": "SecretTunnel CLI to push and pull secrets",
+  "type": "commonjs",
   "bin": {
-    "secrettunnel": "dist/index.js"
+    "sttl": "dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "bun run src/index.ts"
   },
   "dependencies": {
-    "@repo/encryption": "workspace:*",
     "axios": "^1.14.0",
     "ora": "^9.3.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
   }
 }

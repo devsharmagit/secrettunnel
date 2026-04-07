@@ -25,14 +25,14 @@ http://localhost:3000/api/secrets
 You can override this with environment variables:
 
 ```txt
-SECRETTUNNEL_API_URL=http://localhost:3000/api/secrets
+SECRETTUNNEL_API_URL=http://localhost:3000
 ```
 
 Fallback behavior:
 
 1. `SECRETTUNNEL_API_URL` (preferred)
 2. `API_URL`
-3. `NODE_ENV=production` -> `https://api.woirohs.com/api/secrets`
+3. `NODE_ENV=production` -> `https://secrettunnel.vercel.app/api/secrets`
 4. Otherwise -> `http://localhost:3000/api/secrets`
 
 Make sure the web app is running before using CLI commands.
