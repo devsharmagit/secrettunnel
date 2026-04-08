@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, IBM_Plex_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -28,6 +29,7 @@ export default function RootLayout({
     <html lang="en" className={`${geist.variable} ${plexMono.variable} dark`}>
       <body className="min-h-screen bg-[#0c0c0c] text-[#f0ece4] font-sans antialiased selection:bg-[#d4a84b] selection:text-[#0c0c0c]">
         {children}
+        <Analytics />
         <Toaster 
           theme="dark" 
           position="bottom-center" 
