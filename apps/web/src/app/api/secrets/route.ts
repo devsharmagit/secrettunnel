@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
     const token = crypto.randomUUID();
     const ttlSeconds = data.ttl;
-    const auditTTLSeconds = ttlSeconds + 86400;
+    const auditTTLSeconds = ttlSeconds + 86400; // keep audit for 24 hours after secret expires
     const createdAt = new Date().toISOString();
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
     const creatorIp = getCreatorIp(request);
@@ -49,7 +49,8 @@ export async function POST(request: Request) {
       expiresAt,
       viewedAt: null,
       viewerIp: null,
-      userId: session?.user.id ?? null
+      userId: session?.user.id ?? null,
+      webhookUrl: data.weebhookUrl ?? null,
     };
 
     const writes : Promise<"OK" | number>[] = [

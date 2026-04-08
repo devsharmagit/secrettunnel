@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { redis } from "@/lib/redis";
+import { redis, qstash } from "@/lib/redis";
 import { NextResponse } from "next/server";
 
 function getViewerIp(request: Request): string {
@@ -7,7 +7,6 @@ function getViewerIp(request: Request): string {
   if (forwardedFor) {
     return forwardedFor.split(",")[0]?.trim() || "unknown";
   }
-
   return (
     request.headers.get("x-real-ip") ||
     request.headers.get("cf-connecting-ip") ||
@@ -31,8 +30,8 @@ async function updateAudit(token: string, patch: Record<string, unknown>) {
 
   const parsed = parseJsonLike(raw);
   const updated = { ...parsed, ...patch };
-  const ttl = await redis.ttl(auditKey);
 
+  const ttl = await redis.ttl(auditKey);
   if (typeof ttl === "number" && ttl > 0) {
     await redis.setex(auditKey, ttl, JSON.stringify(updated));
   } else {
@@ -40,9 +39,22 @@ async function updateAudit(token: string, patch: Record<string, unknown>) {
   }
 }
 
+async function enqueueWebhook(
+  token: string,
+  webhookUrl: string,
+  viewedAt: string,
+  viewerIp: string
+) {
+  await qstash.publishJSON({
+    url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/deliver`,
+    body: { token, webhookUrl, viewedAt, viewerIp },
+  });
+  await updateAudit(token, { webhookStatus: "enqueued" });
+}
+
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ token: string }> },
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const { token } = await params;
@@ -51,14 +63,23 @@ export async function GET(
     if (!data) {
       return NextResponse.json(
         { message: "secret not found or already viewed" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
-    await updateAudit(token, {
-      viewedAt: new Date().toISOString(),
-      viewerIp: getViewerIp(request),
-    });
+    const viewedAt = new Date().toISOString();
+    const viewerIp = getViewerIp(request);
+
+    const auditRaw = await redis.get<string | Record<string, unknown>>(
+      `audit:${token}`
+    );
+    const audit = auditRaw ? parseJsonLike(auditRaw) : null;
+
+    await updateAudit(token, { viewedAt, viewerIp });
+
+    if (audit?.webhookUrl && typeof audit.webhookUrl === "string") {
+      await enqueueWebhook(token, audit.webhookUrl, viewedAt, viewerIp);
+    }
 
     const secretData = parseJsonLike(data as string | Record<string, unknown>);
     return NextResponse.json({ data: secretData }, { status: 200 });
@@ -66,32 +87,33 @@ export async function GET(
     console.error(error);
     return NextResponse.json(
       { success: false, message: "something went wrong server side" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: Promise<{ token: string }> },
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, message: "unauthenticated" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
     const { token } = await params;
 
-    // Verify ownership before deleting
-    const auditRaw = await redis.get<string | Record<string, unknown>>(`audit:${token}`);
+    const auditRaw = await redis.get<string | Record<string, unknown>>(
+      `audit:${token}`
+    );
     if (!auditRaw) {
       return NextResponse.json(
         { success: false, message: "secret not found" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -99,17 +121,15 @@ export async function DELETE(
     if (audit.userId !== session.user.id) {
       return NextResponse.json(
         { success: false, message: "forbidden" },
-        { status: 403 },
+        { status: 403 }
       );
     }
 
     const deleted = await redis.del(`secret:${token}`);
     if (deleted === 0) {
-      // Secret already burned (viewed or expired) — still a success,
-      // the caller just wanted it gone
       return NextResponse.json(
         { success: false, message: "secret already viewed or expired" },
-        { status: 410 },
+        { status: 410 }
       );
     }
 
@@ -123,7 +143,7 @@ export async function DELETE(
     console.error(error);
     return NextResponse.json(
       { success: false, message: "something went wrong server side" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
