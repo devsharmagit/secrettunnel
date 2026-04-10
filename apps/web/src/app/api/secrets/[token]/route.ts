@@ -45,8 +45,7 @@ async function enqueueWebhook(
   viewedAt: string,
   viewerIp: string
 ) {
-  // const host = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  const host = "https://9c0d-203-81-240-115.ngrok-free.app";
+  const host = process.env.NEXTAUTH_URL || "http://localhost:3000";
   const url = `${host}/api/webhooks/deliver`;
 
   await qstash.publishJSON({
