@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       viewedAt: null,
       viewerIp: null,
       userId: session?.user.id ?? null,
-      webhookUrl: data.weebhookUrl ?? null,
+      webhookUrl: data.webhookUrl ?? null,
     };
 
     const writes : Promise<"OK" | number>[] = [

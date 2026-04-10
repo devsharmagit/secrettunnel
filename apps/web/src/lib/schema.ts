@@ -6,7 +6,7 @@ export const CreateSecretSchema = z.object({
     iv: z.string(), 
     ttl: z.coerce.number().int().positive(),
     passwordHash: z.string().optional(),
-    weebhookUrl: z.string().url().optional(),
+    webhookUrl: z.string().url().optional(),
 }).strict()
 
 export type CreateSecretSchemaType = z.infer<typeof CreateSecretSchema>;
