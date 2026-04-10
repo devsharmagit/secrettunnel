@@ -7,7 +7,7 @@ import { readFileSync } from "fs";
 
 export function printUsage() {
   console.log("Usage:");
-  console.log("  secrettunnel push 'your secret message' [--ttl 24h] [--file path] [--password value]");
+  console.log("  secrettunnel push 'your secret message' [--ttl 24h] [--file path] [--password value] [--webhook url]");
   console.log("    --ttl supports seconds or 1m|1h|7d style values (default: 24h)");
   console.log("  secrettunnel pull '<share-url-with-key>' [--password value] [--output <path|->]");
   console.log("  secrettunnel pull <token> --key <base64Key> [--password value] [--output <path|->]");
@@ -66,6 +66,7 @@ export function parsePushArgs(args: string[]): PushArgs {
   let filePath: string | null = null;
   let ttl = DEFAULT_TTL_SECONDS;
   let password: string | null = null;
+  let webhookUrl: string | null = null;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -104,6 +105,17 @@ export function parsePushArgs(args: string[]): PushArgs {
       continue;
     }
 
+    if (arg === "--webhook") {
+      const next = args[i + 1];
+      if (!next || next.startsWith("--")) {
+        exitWithError("Missing value for --webhook");
+      }
+
+      webhookUrl = next;
+      i++;
+      continue;
+    }
+
     if (arg.startsWith("--")) {
       exitWithError(`Unknown option for push command: ${arg}`);
     }
@@ -111,7 +123,7 @@ export function parsePushArgs(args: string[]): PushArgs {
     content = content ? `${content} ${arg}` : arg;
   }
 
-  return { content, filePath, ttl, password };
+  return { content, filePath, ttl, password, webhookUrl };
 }
 
 export function parsePullArgs(args: string[]): PullArgs {

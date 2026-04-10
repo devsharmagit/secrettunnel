@@ -3,6 +3,7 @@ export interface PushArgs {
   filePath: string | null;
   ttl: number;
   password: string | null;
+  webhookUrl: string | null;
 }
 
 export interface PullArgs {

@@ -27,7 +27,7 @@ async function main() {
         password = await promptForOptionalPassword(rl);
       }
 
-      await handlePush(content, password, args.ttl);
+      await handlePush(content, password, args.ttl, args.webhookUrl);
       return;
     }
 

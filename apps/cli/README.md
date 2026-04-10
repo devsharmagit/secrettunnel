@@ -40,7 +40,7 @@ Make sure the web app is running before using CLI commands.
 ## Command Summary
 
 ```bash
-bun src/index.ts push <content> [--ttl <duration>] [--file <path>] [--password <value>]
+bun src/index.ts push <content> [--ttl <duration>] [--file <path>] [--password <value>] [--webhook <url>]
 bun src/index.ts pull <share-url> [--password <value>] [--output <path|->]
 bun src/index.ts pull <token> --key <base64Key> [--password <value>] [--output <path|->]
 ```
@@ -82,6 +82,12 @@ bun src/index.ts push "temporary secret" --ttl 1h
 
 ```bash
 bun src/index.ts push "top secret" --password mypass123
+```
+
+### Push with webhook callback
+
+```bash
+bun src/index.ts push --file .env --ttl 24h --webhook https://api.clientapp.com/secret/sharing
 ```
 
 On success, CLI prints:

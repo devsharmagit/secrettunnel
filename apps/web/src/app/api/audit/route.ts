@@ -11,6 +11,26 @@ function parseJsonLike(value: string | Record<string, unknown>) {
   }
 }
 
+function getWebhookStatus(audit: Record<string, unknown>):
+  | "pending"
+  | "enqueued"
+  | "delivered"
+  | "failed"
+  | null {
+  const status = audit.webhookStatus;
+  if (
+    status === "pending" ||
+    status === "enqueued" ||
+    status === "delivered" ||
+    status === "failed"
+  ) {
+    return status;
+  }
+
+  const hasWebhookUrl = typeof audit.webhookUrl === "string" && audit.webhookUrl.length > 0;
+  return hasWebhookUrl ? "pending" : null;
+}
+
 export async function GET() {
   try {
     const session = await auth();
@@ -43,6 +63,7 @@ export async function GET() {
             expiresAt: null,
             viewedAt: null,
             burnedAt: null,
+            webhookStatus: null,
           };
         }
 
@@ -55,6 +76,7 @@ export async function GET() {
           expiresAt: audit.expiresAt ?? null,
           viewedAt: audit.viewedAt ?? null,
           burnedAt: audit.burnedAt ?? null,
+          webhookStatus: getWebhookStatus(audit),
         };
       }),
     );

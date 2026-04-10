@@ -10,6 +10,7 @@ interface Secret {
   createdAt: string | null;
   expiresAt: string | null;
   status: "ACTIVE" | "VIEWED" | "BURNED" | "EXPIRED";
+  webhookStatus: "pending" | "enqueued" | "delivered" | "failed" | null;
   viewedAt: string | null;
   burnedAt: string | null;
   expired: boolean;
@@ -22,6 +23,7 @@ interface AuditApiEntry {
   expiresAt: string | null;
   viewedAt: string | null;
   burnedAt: string | null;
+  webhookStatus: "pending" | "enqueued" | "delivered" | "failed" | null;
 }
 
 interface AuditApiResponse {
@@ -44,6 +46,7 @@ function toSecret(entry: AuditApiEntry): Secret {
     token: entry.token,
     createdAt: entry.createdAt,
     expiresAt: entry.expiresAt,
+    webhookStatus: entry.webhookStatus,
     viewedAt: entry.viewedAt,
     burnedAt: entry.burnedAt,
     expired: entry.expired,
@@ -91,6 +94,21 @@ const getStatusStyles = (status: Secret["status"]) => {
       return "border-[#b33a3a] text-[#b33a3a]";
     case "EXPIRED":
       return "border-[#4a4a4a] text-[#4a4a4a]";
+    default:
+      return "border-[#4a4a4a] text-[#4a4a4a]";
+  }
+};
+
+const getWebhookStatusStyles = (status: NonNullable<Secret["webhookStatus"]>) => {
+  switch (status) {
+    case "pending":
+      return "border-[#8a8a8a] text-[#8a8a8a]";
+    case "enqueued":
+      return "border-[#d4a84b] text-[#d4a84b]";
+    case "delivered":
+      return "border-[#4a7c59] text-[#4a7c59]";
+    case "failed":
+      return "border-[#b33a3a] text-[#b33a3a]";
     default:
       return "border-[#4a4a4a] text-[#4a4a4a]";
   }
@@ -268,6 +286,7 @@ export function AuditTable() {
               <th className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a] px-6 py-3 font-medium">Created</th>
               <th className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a] px-6 py-3 font-medium">Expires</th>
               <th className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a] px-6 py-3 font-medium">Status</th>
+              <th className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a] px-6 py-3 font-medium">Webhook</th>
               <th className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a] px-6 py-3 font-medium">Viewed At</th>
               <th className="font-sans text-[10px] tracking-wider uppercase text-[#8a8a8a] px-6 py-3 font-medium text-right">Actions</th>
             </tr>
@@ -321,6 +340,17 @@ export function AuditTable() {
                       </span>
                     </td>
                     <td className="px-6">
+                      {secret.webhookStatus ? (
+                        <span
+                          className={`inline-flex items-center h-5.5 px-2 rounded-sm border font-mono text-[11px] ${getWebhookStatusStyles(secret.webhookStatus)}`}
+                        >
+                          {secret.webhookStatus}
+                        </span>
+                      ) : (
+                        <span className="font-sans text-[13px] text-[#4a4a4a]">—</span>
+                      )}
+                    </td>
+                    <td className="px-6">
                       {secret.viewedAt ? (
                         <span className="font-sans text-[13px] text-[#8a8a8a]" title={new Date(secret.viewedAt).toISOString()}>
                           {getRelativeTime(secret.viewedAt)}
@@ -349,7 +379,7 @@ export function AuditTable() {
                   {/* Inline Burn Confirmation */}
                   {burningId === secret.id && (
                     <tr className={`bg-[#1a1a1a] ${!isLast ? "border-b border-[#2a2a2a]" : ""}`}>
-                      <td colSpan={6} className="px-6 py-4">
+                      <td colSpan={7} className="px-6 py-4">
                         <div className="flex items-center justify-end gap-4">
                           <span className="font-sans text-[13px] text-[#8a8a8a]">
                             Burn this secret? This cannot be undone.

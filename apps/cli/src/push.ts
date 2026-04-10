@@ -5,7 +5,12 @@ import { API_URL, SHARE_BASE_URL, STEP_TIMEOUT_MS } from "./config";
 import { getAxiosErrorMessage } from "./utils";
 
 
-export async function handlePush(content: string, password: string | null, ttl: number) {
+export async function handlePush(
+  content: string,
+  password: string | null,
+  ttl: number,
+  webhookUrl: string | null,
+) {
   const spinner = ora("Encrypting secret...").start();
 
   try {
@@ -33,6 +38,7 @@ export async function handlePush(content: string, password: string | null, ttl: 
         iv,
         ttl,
         passwordHash: saltForServer,
+        webhookUrl: webhookUrl ?? undefined,
       },
       { timeout: STEP_TIMEOUT_MS },
     );
