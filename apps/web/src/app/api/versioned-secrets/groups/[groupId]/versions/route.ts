@@ -53,27 +53,53 @@ export async function POST(
 
     const { ciphertext, iv } = parseResult.data;
 
-    // Get the current max version number
-    const latestVersion = await prisma.secretVersion.findFirst({
-      where: { groupId },
-      orderBy: { versionNumber: "desc" },
-      select: { versionNumber: true },
-    });
+    const MAX_RETRIES = 3;
 
-    const nextVersionNumber = (latestVersion?.versionNumber ?? 0) + 1;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      
+      const latestVersion = await prisma.secretVersion.findFirst({
+        where: { groupId },
+        orderBy: { versionNumber: "desc" },
+        select: { versionNumber: true },
+      });
 
-    await prisma.secretVersion.create({
-      data: {
-        groupId,
-        versionNumber: nextVersionNumber,
-        ciphertext,
-        iv,
-      },
-    });
+      const nextVersionNumber = (latestVersion?.versionNumber ?? 0) + 1;
 
+      try {
+        await prisma.secretVersion.create({
+          data: {
+            groupId,
+            versionNumber: nextVersionNumber,
+            ciphertext,
+            iv,
+          },
+        });
+
+        return NextResponse.json(
+          { versionNumber: nextVersionNumber },
+          { status: 201 },
+        );
+      } catch (err: any) {
+        // Prisma unique constraint error
+        if (err.code === "P2002") {
+          // conflict → retry
+          if (attempt === MAX_RETRIES - 1) {
+            return NextResponse.json(
+              { success: false, message: "Conflict, please retry" },
+              { status: 409 },
+            );
+          }
+          continue;
+        }
+
+        throw err;
+      }
+    }
+
+    // fallback (should never hit)
     return NextResponse.json(
-      { versionNumber: nextVersionNumber },
-      { status: 201 },
+      { success: false, message: "Failed to create version" },
+      { status: 500 },
     );
   } catch (error) {
     console.error("POST /api/versioned-secrets/groups/[groupId]/versions error:", error);

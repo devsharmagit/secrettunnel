@@ -19,7 +19,7 @@ export async function POST(request: Request) {
           message: "Invalid request body",
           errors: error.flatten().fieldErrors,
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -32,14 +32,15 @@ export async function POST(request: Request) {
             message: "Invalid request body",
             errors: { webhookUrl: [webhookValidation.message] },
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
 
     const token = crypto.randomUUID();
     const ttlSeconds = data.ttl;
-    const auditTTLSeconds = ttlSeconds + 86400; // keep audit for 24 hours after secret expires
+    const auditTTLSeconds = ttlSeconds + 86400;
+
     const createdAt = new Date().toISOString();
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
     const creatorIp = getViewerIp(request);
@@ -60,25 +61,44 @@ export async function POST(request: Request) {
       webhookUrl: data.webhookUrl ?? null,
     };
 
-    const writes : Promise<"OK" | number>[] = [
-  redis.setex(`secret:${token}`, ttlSeconds, JSON.stringify(secretPayload)),
-  redis.setex(`audit:${token}`, auditTTLSeconds, JSON.stringify(auditPayload)),
-];
+    const multi = redis.multi();
 
-if (session?.user.id) {
-  writes.push(
-    redis.lpush(`user:${session?.user.id}:secrets`, token)
-  );
-}
+    multi.setex(
+      `secret:${token}`,
+      ttlSeconds,
+      JSON.stringify(secretPayload)
+    );
 
-await Promise.all(writes);
+    multi.setex(
+      `audit:${token}`,
+      auditTTLSeconds,
+      JSON.stringify(auditPayload)
+    );
+
+    const results = await multi.exec();
+
+    if (!results) {
+      throw new Error("Redis transaction failed");
+    }
+
+    if (session?.user.id) {
+      redis
+        .lpush(`user:${session.user.id}:secrets`, token)
+        .catch((err) => {
+          console.error("Failed to push user secret index:", err);
+        });
+    }
 
     return NextResponse.json({ token }, { status: 201 });
   } catch (error) {
-    console.error(error);
+    console.error("Create secret error:", error);
+
     return NextResponse.json(
-      { success: false, message: "something went wrong server side" },
-      { status: 500 },
+      {
+        success: false,
+        message: "something went wrong server side",
+      },
+      { status: 500 }
     );
   }
 }

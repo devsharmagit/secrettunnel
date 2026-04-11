@@ -26,50 +26,66 @@ export async function GET(
 ) {
   try {
     const { token } = await params;
+    const secretKey = `secret:${token}`;
+    const lockKey = `lock:${token}`;
 
-    const auditRaw = await redis.get<string | Record<string, unknown>>(
-      `audit:${token}`
-    );
-    const audit = auditRaw ? parseJsonLike(auditRaw) : null;
-
-    if (audit?.webhookUrl && typeof audit.webhookUrl === "string") {
-      const webhookValidation = await validateWebhookUrlServer(audit.webhookUrl);
-      if (!webhookValidation.ok) {
-        await updateAudit(token, {
-          webhookStatus: "blocked",
-          webhookFailureReason: webhookValidation.message,
-        });
-
-        return NextResponse.json(
-          {
-            success: false,
-            message: "blocked unsafe webhook destination",
-            errors: { webhookUrl: [webhookValidation.message] },
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    const data = await redis.getdel(`secret:${token}`);
-    if (!data) {
+    const lock = await redis.set(lockKey, "1", { nx: true, ex: 30 });
+    if (!lock) {
       return NextResponse.json(
-        { message: "secret not found or already viewed" },
-        { status: 404 }
+        { success: false, message: "secret is being accessed" },
+        { status: 409 }
       );
     }
 
-    const viewedAt = new Date().toISOString();
-    const viewerIp = getViewerIp(request);
+    try {
+      const auditRaw = await redis.get<string | Record<string, unknown>>(
+        `audit:${token}`
+      );
+      const audit = auditRaw ? parseJsonLike(auditRaw) : null;
 
-    await updateAudit(token, { viewedAt, viewerIp });
+      if (audit?.webhookUrl && typeof audit.webhookUrl === "string") {
+        const webhookValidation = await validateWebhookUrlServer(audit.webhookUrl);
+        if (!webhookValidation.ok) {
+          await updateAudit(token, {
+            webhookStatus: "blocked",
+            webhookFailureReason: webhookValidation.message,
+          });
 
-    if (audit?.webhookUrl && typeof audit.webhookUrl === "string") {
-      await enqueueWebhook(token, audit.webhookUrl, viewedAt, viewerIp);
+          return NextResponse.json(
+            {
+              success: false,
+              message: "blocked unsafe webhook destination",
+              errors: { webhookUrl: [webhookValidation.message] },
+            },
+            { status: 400 }
+          );
+        }
+      }
+
+      const data = await redis.get(secretKey);
+      if (!data) {
+        return NextResponse.json(
+          { message: "secret not found or already viewed" },
+          { status: 404 }
+        );
+      }
+
+      const secretData = parseJsonLike(data as string | Record<string, unknown>);
+      const viewedAt = new Date().toISOString();
+      const viewerIp = getViewerIp(request);
+
+      await updateAudit(token, { viewedAt, viewerIp });
+
+      if (audit?.webhookUrl && typeof audit.webhookUrl === "string") {
+        await enqueueWebhook(token, audit.webhookUrl, viewedAt, viewerIp);
+      }
+
+      await redis.del(secretKey);
+
+      return NextResponse.json({ data: secretData }, { status: 200 });
+    } finally {
+      await redis.del(lockKey);
     }
-
-    const secretData = parseJsonLike(data as string | Record<string, unknown>);
-    return NextResponse.json({ data: secretData }, { status: 200 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
