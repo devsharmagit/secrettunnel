@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Eye, EyeOff, Github } from "lucide-react";
 import { useState } from "react";
+import axios from "axios";
 
 export function SignUpPage({callbackUrl}:{callbackUrl: string}) {
   const router = useRouter();
@@ -41,41 +42,35 @@ export function SignUpPage({callbackUrl}:{callbackUrl: string}) {
 
     setIsSubmitting(true);
 
-    const response = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    try {
+      await axios.post("/api/auth/signup", {
         name,
         email,
         password: pwd,
-      }),
-    });
+      });
 
-    const data = (await response.json()) as { error?: string };
+      const result = await signIn("credentials", {
+        email,
+        password: pwd,
+        redirect: false,
+        callbackUrl,
+      });
 
-    if (!response.ok) {
-      setError(data.error ?? "Unable to create account.");
+      if (!result || result.error) {
+        setError("Account created, but automatic sign in failed.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      router.push(result.url ?? callbackUrl);
+      router.refresh();
+    } catch (error) {
+      const errorMessage = axios.isAxiosError(error) && error.response?.data?.error
+        ? error.response.data.error
+        : "Unable to create account.";
+      setError(errorMessage);
       setIsSubmitting(false);
-      return;
     }
-
-    const result = await signIn("credentials", {
-      email,
-      password: pwd,
-      redirect: false,
-      callbackUrl,
-    });
-
-    if (!result || result.error) {
-      setError("Account created, but automatic sign in failed.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    router.push(result.url ?? callbackUrl);
-    router.refresh();
   };
 
   return (

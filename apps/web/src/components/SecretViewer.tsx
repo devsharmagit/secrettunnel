@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import axios from "axios";
 import { importKey, applyPasswordLayer, decrypt } from "@repo/encryption";
 import Link from "next/link";
 
@@ -37,19 +38,10 @@ export function SecretViewer({ token }: SecretViewerProps) {
 
     const fetchSecret = async () => {
       try {
-        const res = await fetch(`/api/secrets/${token}`);
-        if (res.status === 404) {
-          setStatus("not-found");
-          return;
-        }
-
-        if (!res.ok) {
-          throw new Error("Failed to fetch secret.");
-        }
-
-        const json = await res.json();
+        const response = await axios.get(`/api/secrets/${token}`);
+        const json = response.data;
         const data = json.data;
-        
+
         setEncryptedData(data);
 
         if (data.passwordHash) {
@@ -58,6 +50,10 @@ export function SecretViewer({ token }: SecretViewerProps) {
           await performDecryption(data, key);
         }
       } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 404) {
+          setStatus("not-found");
+          return;
+        }
         console.error(err);
         setStatus("error");
         setErrorMessage("An error occurred while fetching the secret.");

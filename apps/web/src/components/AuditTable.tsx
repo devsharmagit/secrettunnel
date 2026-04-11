@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Check, Flame, Lock } from "lucide-react";
 import Link from "next/link";
+import axios from "axios";
 
 interface Secret {
   id: string;
@@ -129,10 +130,10 @@ export function AuditTable() {
       setLoadError(null);
 
       try {
-        const response = await fetch("/api/audit", { method: "GET", cache: "no-store" });
-        const json = (await response.json()) as AuditApiResponse;
+        const axiosResponse = await axios.get("/api/audit");
+        const json = axiosResponse.data as AuditApiResponse;
 
-        if (!response.ok || !json.success) {
+        if (!json.success) {
           throw new Error(json.message ?? "Failed to fetch audit entries.");
         }
 
@@ -172,9 +173,8 @@ export function AuditTable() {
   };
 
   const handleBurn = async (id: string) => {
-    const response = await fetch(`/api/secrets/${id}`, { method: "DELETE" });
-
-    if (response.ok || response.status === 410) {
+    try {
+      await axios.delete(`/api/secrets/${id}`);
       setSecrets((current) =>
         current.map((item) =>
           item.id === id
@@ -186,10 +186,11 @@ export function AuditTable() {
             : item
         )
       );
-    }
-
+    } catch (error) {
+      console.error("Failed to burn secret:", error);
+    } finally {   
     setBurningId(null);
-  };
+  };}
 
   const now = Date.now();
   const stats = useMemo(() => {
@@ -413,4 +414,4 @@ export function AuditTable() {
       </div>
     </>
   );
-}
+  }

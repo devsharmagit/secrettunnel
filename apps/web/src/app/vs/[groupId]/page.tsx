@@ -6,6 +6,7 @@ import Link from "next/link";
 import { diffLines, type Change } from "diff";
 import { Copy, Trash2, ChevronDown, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import axios from "axios";
 import { importKey, encrypt, decrypt } from "@repo/encryption";
 
 interface VersionData {
@@ -84,33 +85,11 @@ export default function VersionedSecretPage({
     if (!groupId) return;
 
     try {
-      const res = await fetch(
+      const response = await axios.get(
         `/api/versioned-secrets/groups/${groupId}/versions`,
       );
 
-      if (res.status === 401) {
-        setError("You must be signed in to view versioned secrets.");
-        setIsLoading(false);
-        return;
-      }
-
-      if (res.status === 403) {
-        setError("You do not have access to this secret group.");
-        setIsLoading(false);
-        return;
-      }
-
-      if (res.status === 404) {
-        setError("Secret group not found.");
-        setIsLoading(false);
-        return;
-      }
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch versions");
-      }
-
-      const json = (await res.json()) as { versions: VersionData[] };
+      const json = response.data as { versions: VersionData[] };
       setVersions(json.versions);
 
       // Default to latest version
@@ -118,8 +97,20 @@ export default function VersionedSecretPage({
         const latest = json.versions[json.versions.length - 1]!;
         setSelectedVersion(latest.versionNumber);
       }
-    } catch {
-      setError("Failed to load versions. Please try again.");
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          setError("You must be signed in to view versioned secrets.");
+        } else if (error.response?.status === 403) {
+          setError("You do not have access to this secret group.");
+        } else if (error.response?.status === 404) {
+          setError("Secret group not found.");
+        } else {
+          setError("Failed to load versions. Please try again.");
+        }
+      } else {
+        setError("Failed to load versions. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -191,21 +182,12 @@ export default function VersionedSecretPage({
     try {
       const { ciphertext, iv } = await encrypt(newContent, cryptoKey);
 
-      const res = await fetch(
+      const response = await axios.post(
         `/api/versioned-secrets/groups/${groupId}/versions`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ciphertext, iv }),
-        },
+        { ciphertext, iv },
       );
 
-      if (!res.ok) {
-        const json = (await res.json()) as { message?: string };
-        throw new Error(json.message ?? "Failed to add version");
-      }
-
-      const json = (await res.json()) as { versionNumber: number };
+      const json = response.data as { versionNumber: number };
       toast.success(`Version ${json.versionNumber} created`);
       setNewContent("");
 
@@ -228,13 +210,7 @@ export default function VersionedSecretPage({
     setIsDeleting(true);
 
     try {
-      const res = await fetch(`/api/versioned-secrets/groups/${groupId}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to delete group");
-      }
+      await axios.delete(`/api/versioned-secrets/groups/${groupId}`);
 
       toast.success("Secret group deleted");
       router.push("/dashboard");

@@ -1,15 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redis } from "@/lib/redis";
+import { parseJsonLike } from "@/lib/utils";
 import { NextResponse } from "next/server";
-
-function parseJsonLike(value: string | Record<string, unknown>) {
-  if (typeof value !== "string") return value;
-  try {
-    return JSON.parse(value) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
 
 function getWebhookStatus(audit: Record<string, unknown>):
   | "pending"

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Copy, Trash2, Plus, X, Lock, ExternalLink, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import axios from "axios";
 import { generateKey, encrypt, exportKey } from "@repo/encryption";
 
 interface SecretGroupItem {
@@ -68,16 +69,8 @@ export function VersionedSecretsSection() {
     setLoadError(null);
 
     try {
-      const res = await fetch("/api/versioned-secrets/groups", {
-        method: "GET",
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch groups");
-      }
-
-      const json = (await res.json()) as { groups: SecretGroupItem[] };
+      const response = await axios.get("/api/versioned-secrets/groups");
+      const json = response.data as { groups: SecretGroupItem[] };
       setGroups(json.groups);
     } catch (err) {
       const message =
@@ -102,18 +95,13 @@ export function VersionedSecretsSection() {
       const { ciphertext, iv } = await encrypt(createContent, key);
 
       // 3. POST to server
-      const res = await fetch("/api/versioned-secrets/groups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: createName.trim(), ciphertext, iv }),
+      const response = await axios.post("/api/versioned-secrets/groups", {
+        name: createName.trim(),
+        ciphertext,
+        iv,
       });
 
-      if (!res.ok) {
-        const json = (await res.json()) as { message?: string };
-        throw new Error(json.message ?? "Failed to create group");
-      }
-
-      const json = (await res.json()) as { groupId: string };
+      const json = response.data as { groupId: string };
 
       // 4. Export key and construct master link
       const exportedKey = await exportKey(key);
@@ -138,14 +126,7 @@ export function VersionedSecretsSection() {
 
   const handleDelete = async (groupId: string) => {
     try {
-      const res = await fetch(`/api/versioned-secrets/groups/${groupId}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to delete group");
-      }
-
+      await axios.delete(`/api/versioned-secrets/groups/${groupId}`);
       setGroups((prev) => prev.filter((g) => g.id !== groupId));
       toast.success("Secret group deleted");
     } catch {
