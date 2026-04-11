@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-
 import { AuditTable } from "@/components/AuditTable";
+import { VersionedSecretsSection } from "@/components/VersionedSecretsSection";
 import { AppHeader } from "@/components/AppHeader";
 import { auth } from "@/lib/auth";
 
@@ -35,6 +35,8 @@ export default async function DashboardPage() {
         </div>
 
         <AuditTable />
+
+        <VersionedSecretsSection />
       </section>
     </main>
   );

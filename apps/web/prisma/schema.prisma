@@ -46,3 +46,23 @@ model Account {
 
   @@unique([provider, providerAccountId])
 }
+
+model SecretGroup {
+  id        String          @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime        @default(now())
+  versions  SecretVersion[]
+}
+
+model SecretVersion {
+  id            String      @id @default(cuid())
+  groupId       String
+  group         SecretGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  ciphertext    String
+  iv            String
+  createdAt     DateTime    @default(now())
+
+  @@unique([groupId, versionNumber])
+}
