@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
 import { getViewerIp } from "@/lib/utils";
+import { validateWebhookUrlServer } from "@/lib/webhook-url.server";
 
 export async function POST(request: Request) {
   try {
@@ -13,9 +14,27 @@ export async function POST(request: Request) {
 
     if (!success) {
       return NextResponse.json(
-        { success: false, message: "wrong input data", error },
+        {
+          success: false,
+          message: "Invalid request body",
+          errors: error.flatten().fieldErrors,
+        },
         { status: 400 },
       );
+    }
+
+    if (data.webhookUrl) {
+      const webhookValidation = await validateWebhookUrlServer(data.webhookUrl);
+      if (!webhookValidation.ok) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid request body",
+            errors: { webhookUrl: [webhookValidation.message] },
+          },
+          { status: 400 },
+        );
+      }
     }
 
     const token = crypto.randomUUID();

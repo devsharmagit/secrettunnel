@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redis, qstash } from "@/lib/redis";
 import { getViewerIp, parseJsonLike, updateAudit } from "@/lib/utils";
+import { validateWebhookUrlServer } from "@/lib/webhook-url.server";
 import { NextResponse } from "next/server";
 
 async function enqueueWebhook(
@@ -26,6 +27,30 @@ export async function GET(
   try {
     const { token } = await params;
 
+    const auditRaw = await redis.get<string | Record<string, unknown>>(
+      `audit:${token}`
+    );
+    const audit = auditRaw ? parseJsonLike(auditRaw) : null;
+
+    if (audit?.webhookUrl && typeof audit.webhookUrl === "string") {
+      const webhookValidation = await validateWebhookUrlServer(audit.webhookUrl);
+      if (!webhookValidation.ok) {
+        await updateAudit(token, {
+          webhookStatus: "blocked",
+          webhookFailureReason: webhookValidation.message,
+        });
+
+        return NextResponse.json(
+          {
+            success: false,
+            message: "blocked unsafe webhook destination",
+            errors: { webhookUrl: [webhookValidation.message] },
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const data = await redis.getdel(`secret:${token}`);
     if (!data) {
       return NextResponse.json(
@@ -36,11 +61,6 @@ export async function GET(
 
     const viewedAt = new Date().toISOString();
     const viewerIp = getViewerIp(request);
-
-    const auditRaw = await redis.get<string | Record<string, unknown>>(
-      `audit:${token}`
-    );
-    const audit = auditRaw ? parseJsonLike(auditRaw) : null;
 
     await updateAudit(token, { viewedAt, viewerIp });
 

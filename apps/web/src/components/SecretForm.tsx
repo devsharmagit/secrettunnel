@@ -5,12 +5,14 @@ import axios from "axios";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
 import { generateKey, generateSalt, applyPasswordLayer, encrypt, exportKey } from "@repo/encryption";
+import { validateWebhookUrl } from "@/lib/webhook-url";
 
 export function SecretForm() {
   const [content, setContent] = useState("");
   const [ttl, setTtl] = useState("86400"); // Default 24h (1 day = 86400s)
   const [password, setPassword] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookError, setWebhookError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -21,6 +23,17 @@ export function SecretForm() {
       toast.error("Secret content cannot be empty.");
       return;
     }
+
+    const trimmedWebhookUrl = webhookUrl.trim();
+    if (trimmedWebhookUrl) {
+      const validationResult = validateWebhookUrl(trimmedWebhookUrl);
+      if (!validationResult.ok) {
+        setWebhookError(validationResult.message);
+        return;
+      }
+    }
+
+    setWebhookError(null);
 
     setIsSubmitting(true);
     setShareUrl(null);
@@ -38,7 +51,6 @@ export function SecretForm() {
 
       const { ciphertext, iv } = await encrypt(content, keyToUse);
       const exportedKeyBase64 = await exportKey(baseKey);
-      const trimmedWebhookUrl = webhookUrl.trim();
 
       const { data } = await axios.post("/api/secrets", {
           ciphertext,
@@ -54,10 +66,21 @@ export function SecretForm() {
       setContent("");
       setPassword("");
       setWebhookUrl("");
+      setWebhookError(null);
       setShowPassword(false);
     } catch (error) {
       console.error(error);
       if (axios.isAxiosError(error)) {
+        const serverFieldErrors = error.response?.data?.errors;
+        const webhookFieldError =
+          Array.isArray(serverFieldErrors?.webhookUrl) && serverFieldErrors.webhookUrl.length > 0
+            ? serverFieldErrors.webhookUrl[0]
+            : null;
+
+        if (typeof webhookFieldError === "string") {
+          setWebhookError(webhookFieldError);
+        }
+
         toast.error(error.response?.data?.message || "Failed to create secret");
       } else {
         toast.error(error instanceof Error ? error.message : "Something went wrong.");
@@ -183,9 +206,25 @@ export function SecretForm() {
               type="url"
               placeholder="Webhook URL (optional)"
               value={webhookUrl}
-              onChange={(e) => setWebhookUrl(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setWebhookUrl(value);
+
+                const trimmedValue = value.trim();
+                if (!trimmedValue) {
+                  setWebhookError(null);
+                  return;
+                }
+
+                const validationResult = validateWebhookUrl(trimmedValue);
+                setWebhookError(validationResult.ok ? null : validationResult.message);
+              }}
               className="w-full bg-[#121212] border border-[#2a2a2a] rounded-sm px-4 py-3 font-mono text-[14px] text-[#f0ece4] placeholder:text-[#4a4a4a] outline-none focus:border-[#4a4a4a] transition-colors"
             />
+
+            {webhookError ? (
+              <p className="font-sans text-[12px] text-[#b33a3a]">{webhookError}</p>
+            ) : null}
 
             <div className="bg-[#101010] border border-[#2a2a2a] rounded-sm p-3">
               <p className="font-sans text-[12px] text-[#8a8a8a] mb-2">POST payload example</p>

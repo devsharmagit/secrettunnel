@@ -1,8 +1,10 @@
 import { NextRequest } from "next/server";
 import { redis } from "@/lib/redis";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 const RATE_LIMIT_MAX_REQUESTS = 10;
-const RATE_LIMIT_WINDOW_MS = 60 * 1000; 
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_KEY_PREFIX = "ratelimit:api:secrets:post";
 
 type RateLimitResult = {
@@ -17,27 +19,35 @@ function unwrapExecResult<T>(value: unknown): T {
   return value as T;
 }
 
-function getClientIp(request: NextRequest): string {
+function getTrustedIp(request: NextRequest): string {
   const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
+
+  if (forwardedFor && typeof forwardedFor === "string") {
     return forwardedFor.split(",")[0]?.trim() || "unknown";
   }
-
   return (
-    request.headers.get("x-real-ip") ||
     request.headers.get("cf-connecting-ip") ||
+    request.headers.get("x-real-ip") ||
     "unknown"
   );
 }
 
+async function getTrustedUserId(): Promise<string | null> {
+  const session = await getServerSession(authOptions);
+  return (session?.user as { id?: string })?.id ?? null;
+}
+
 export async function applySecretsPostRateLimit(
-  request: NextRequest,
+  request: NextRequest
 ): Promise<RateLimitResult> {
-  const ip = getClientIp(request);
+  const ip = getTrustedIp(request);
+  const userId = await getTrustedUserId();
 
-  const userId = request.headers.get("x-user-id") || "anon";
+  const identity = userId
+    ? `user:${userId}:ip:${ip}`
+    : `ip:${ip}`;
 
-  const key = `${RATE_LIMIT_KEY_PREFIX}:${ip}:${userId}`;
+  const key = `${RATE_LIMIT_KEY_PREFIX}:${identity}`;
 
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW_MS;

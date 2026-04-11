@@ -47,7 +47,6 @@ export async function GET() {
         );
 
         if (!raw) {
-          // Audit record expired — secret is long gone
           return {
             token,
             expired: true,
@@ -73,8 +72,24 @@ export async function GET() {
       }),
     );
 
+    // Lazy cleanup — remove expired tokens from the user's list
+    const expiredTokens = auditEntries
+      .filter((e) => e.expired)
+      .map((e) => e.token);
+
+    if (expiredTokens.length > 0) {
+      await Promise.all(
+        expiredTokens.map((token) =>
+          redis.lrem(`user:${userId}:secrets`, 0, token),
+        ),
+      );
+    }
+
+    // Only return live entries to the client
+    const liveEntries = auditEntries.filter((e) => !e.expired);
+
     return NextResponse.json(
-      { success: true, data: auditEntries },
+      { success: true, data: liveEntries },
       { status: 200 },
     );
   } catch (error) {
