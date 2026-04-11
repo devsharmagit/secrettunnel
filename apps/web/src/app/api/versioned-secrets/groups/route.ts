@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createSecretGroupSchema } from "@/lib/schema";
 
 // POST /api/versioned-secrets/groups — Create a new group + first version
 export async function POST(request: Request) {
@@ -15,31 +15,24 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
-    const { name, ciphertext, iv } = body as {
-      name?: string;
-      ciphertext?: string;
-      iv?: string;
-    };
-
-    if (
-      !name ||
-      typeof name !== "string" ||
-      !ciphertext ||
-      typeof ciphertext !== "string" ||
-      !iv ||
-      typeof iv !== "string"
-    ) {
+    const parseResult = createSecretGroupSchema.safeParse(await request.json());
+    if (!parseResult.success) {
       return NextResponse.json(
-        { success: false, message: "Missing required fields: name, ciphertext, iv" },
+        {
+          success: false,
+          message: "Invalid request body",
+          errors: parseResult.error.flatten().fieldErrors,
+        },
         { status: 400 },
       );
     }
 
+    const { name, ciphertext, iv } = parseResult.data;
+
     const group = await prisma.secretGroup.create({
       data: {
         userId: session.user.id,
-        name: name.trim(),
+        name,
         versions: {
           create: {
             versionNumber: 1,

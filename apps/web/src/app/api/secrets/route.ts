@@ -3,19 +3,7 @@ import { redis } from "@/lib/redis";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
-
-function getCreatorIp(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() || "unknown";
-  }
-
-  return (
-    request.headers.get("x-real-ip") ||
-    request.headers.get("cf-connecting-ip") ||
-    "unknown"
-  );
-}
+import { getViewerIp } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
@@ -35,7 +23,7 @@ export async function POST(request: Request) {
     const auditTTLSeconds = ttlSeconds + 86400; // keep audit for 24 hours after secret expires
     const createdAt = new Date().toISOString();
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
-    const creatorIp = getCreatorIp(request);
+    const creatorIp = getViewerIp(request);
 
     const secretPayload = {
       ciphertext: data.ciphertext,

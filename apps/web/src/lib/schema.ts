@@ -12,3 +12,13 @@ export const CreateSecretSchema = z.object({
 export type CreateSecretSchemaType = z.infer<typeof CreateSecretSchema>;
 
 
+export const createSecretVersionSchema = z.object({
+  ciphertext: z.string().min(1),
+  iv: z.string().min(1),
+});
+
+export const createSecretGroupSchema = z.object({
+  name: z.string().trim().min(1),
+  ciphertext: z.string().min(1),
+  iv: z.string().min(1),
+});

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createSecretVersionSchema } from "@/lib/schema";
 
 // POST /api/versioned-secrets/groups/[groupId]/versions — Add a new version
 export async function POST(
@@ -39,23 +39,19 @@ export async function POST(
       );
     }
 
-    const body = await request.json();
-    const { ciphertext, iv } = body as {
-      ciphertext?: string;
-      iv?: string;
-    };
-
-    if (
-      !ciphertext ||
-      typeof ciphertext !== "string" ||
-      !iv ||
-      typeof iv !== "string"
-    ) {
+    const parseResult = createSecretVersionSchema.safeParse(await request.json());
+    if (!parseResult.success) {
       return NextResponse.json(
-        { success: false, message: "Missing required fields: ciphertext, iv" },
+        {
+          success: false,
+          message: "Invalid request body",
+          errors: parseResult.error.flatten().fieldErrors,
+        },
         { status: 400 },
       );
     }
+
+    const { ciphertext, iv } = parseResult.data;
 
     // Get the current max version number
     const latestVersion = await prisma.secretVersion.findFirst({
