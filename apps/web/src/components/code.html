@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SecretTunnel | Terminal Vault Security</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "error-container": "#93000a",
+                    "surface-container-high": "#2a2a2b",
+                    "on-primary-fixed-variant": "#5c4300",
+                    "error": "#ffb4ab",
+                    "inverse-on-surface": "#313031",
+                    "on-tertiary-container": "#003d7a",
+                    "on-error-container": "#ffdad6",
+                    "secondary": "#e1c387",
+                    "inverse-primary": "#795900",
+                    "surface-container": "#201f20",
+                    "on-secondary-fixed-variant": "#584414",
+                    "on-secondary": "#402d00",
+                    "background": "#131314",
+                    "on-secondary-fixed": "#261a00",
+                    "surface-bright": "#3a393a",
+                    "secondary-fixed": "#ffdfa0",
+                    "on-surface-variant": "#d3c5ae",
+                    "on-primary-container": "#503a00",
+                    "on-background": "#e5e2e3",
+                    "surface-variant": "#353436",
+                    "tertiary-fixed-dim": "#a9c7ff",
+                    "surface-container-lowest": "#0e0e0f",
+                    "on-primary-fixed": "#261a00",
+                    "outline-variant": "#4f4634",
+                    "surface-tint": "#f6be39",
+                    "surface": "#131314",
+                    "tertiary-container": "#72a9ff",
+                    "surface-dim": "#131314",
+                    "on-secondary-container": "#cfb177",
+                    "on-surface": "#e5e2e3",
+                    "on-tertiary-fixed": "#001b3d",
+                    "tertiary": "#a9c7ff",
+                    "on-tertiary": "#003062",
+                    "surface-container-highest": "#353436",
+                    "primary-fixed-dim": "#f6be39",
+                    "on-primary": "#402d00",
+                    "inverse-surface": "#e5e2e3",
+                    "outline": "#9b8f7a",
+                    "on-tertiary-fixed-variant": "#00468b",
+                    "surface-container-low": "#1c1b1c",
+                    "secondary-fixed-dim": "#e1c387",
+                    "on-error": "#690005",
+                    "primary-container": "#d4a017",
+                    "tertiary-fixed": "#d6e3ff",
+                    "primary": "#f6be39",
+                    "primary-fixed": "#ffdfa0",
+                    "secondary-container": "#584414"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Space Grotesk"],
+                    "body": ["Inter"],
+                    "label": ["Inter"],
+                    "mono": ["JetBrains Mono"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(53, 52, 54, 0.6);
+            backdrop-filter: blur(20px);
+        }
+        .cta-glow {
+            background: linear-gradient(135deg, #f6be39 0%, #d4a017 100%);
+            box-shadow: 0 0 20px rgba(246, 190, 57, 0.2);
+        }
+        .terminal-shadow {
+            box-shadow: 0 20px 40px rgba(246, 190, 57, 0.04);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary selection:text-on-primary">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-gradient-to-b from-[#131314] to-transparent">
+<nav class="flex justify-between items-center max-w-7xl mx-auto px-8 h-20">
+<div class="text-2xl font-bold tracking-tighter text-[#F6BE39] font-['Space_Grotesk']">
+                SecretTunnel
+            </div>
+<div class="hidden md:flex items-center gap-8">
+<a class="font-['Space_Grotesk'] font-medium tracking-tight text-[#F6BE39] border-b-2 border-[#F6BE39] pb-1" href="#">Secrets</a>
+<a class="font-['Space_Grotesk'] font-medium tracking-tight text-slate-400 hover:text-[#F6BE39] transition-colors duration-300" href="#">Webhooks</a>
+<a class="font-['Space_Grotesk'] font-medium tracking-tight text-slate-400 hover:text-[#F6BE39] transition-colors duration-300" href="#">Integrations</a>
+<a class="font-['Space_Grotesk'] font-medium tracking-tight text-slate-400 hover:text-[#F6BE39] transition-colors duration-300" href="#">Documentation</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-slate-400 font-['Space_Grotesk'] text-sm uppercase tracking-widest hover:text-[#F6BE39] transition-colors duration-200">Sign In</button>
+<button class="cta-glow text-on-primary font-headline font-bold px-6 py-2 rounded-sm active:opacity-80 active:scale-95 transition-all">Get Started</button>
+</div>
+</nav>
+</header>
+<main>
+<!-- Hero Section -->
+<section class="relative min-h-screen flex flex-col items-center justify-center pt-20 overflow-hidden">
+<div class="absolute inset-0 z-0">
+<div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(246,190,57,0.08)_0%,transparent_70%)]"></div>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-20 blur-[120px] bg-primary-container rounded-full"></div>
+</div>
+<div class="relative z-10 max-w-5xl px-8 text-center">
+<div class="inline-flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full border border-outline-variant/20 bg-surface-container-low text-primary text-xs font-mono uppercase tracking-[0.2em]">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                    Terminal Vault Active // v3.0.4
+                </div>
+<h1 class="text-6xl md:text-8xl lg:text-9xl font-headline font-extrabold tracking-tighter leading-[0.85] mb-8">
+                    Share a secret,<br/>
+<span class="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-fixed-dim to-secondary">not your privacy</span>
+</h1>
+<p class="max-w-2xl mx-auto text-lg md:text-xl text-on-surface-variant mb-12 font-light leading-relaxed">
+                    Military-grade AES-256-GCM encryption meets zero-knowledge architecture. Secure your digital assets through ephemeral tunnels that vanish without a trace.
+                </p>
+<div class="flex flex-col md:flex-row items-center justify-center gap-6 mb-16">
+<button class="cta-glow text-on-primary font-headline font-bold px-10 py-4 text-lg rounded-sm hover:scale-[1.02] transition-transform">
+                        Launch Vault
+                    </button>
+<button class="flex items-center gap-2 px-8 py-4 border border-outline-variant/30 text-on-surface font-headline font-medium rounded-sm hover:bg-surface-variant/50 transition-all">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+                        Explore CLI
+                    </button>
+</div>
+<!-- Command Snippet -->
+<div class="inline-block mx-auto mb-10 group cursor-default">
+<div class="flex items-center gap-3 px-6 py-4 bg-surface-container-highest/50 border border-primary/20 rounded-lg backdrop-blur-sm terminal-shadow">
+<div class="flex items-center gap-4 font-mono text-sm md:text-base">
+<span class="text-primary select-none opacity-60">$</span>
+<code class="text-on-surface">npx <span class="text-primary font-bold">secrettnl</span> push <span class="text-secondary">"your msg 🤫"</span></code>
+</div>
+<div class="w-[1px] h-4 bg-outline-variant/30 ml-2"></div>
+<button class="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center" title="Copy to clipboard">
+<span class="material-symbols-outlined text-xl" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Terminal Component -->
+<div class="relative z-10 mt-10 w-full max-w-4xl px-8">
+<div class="glass-panel terminal-shadow rounded-lg border border-white/5 overflow-hidden">
+<div class="flex items-center justify-between px-4 py-3 bg-surface-container-high border-b border-white/5">
+<div class="flex gap-2">
+<div class="w-3 h-3 rounded-full bg-error/40"></div>
+<div class="w-3 h-3 rounded-full bg-primary/40"></div>
+<div class="w-3 h-3 rounded-full bg-tertiary/40"></div>
+</div>
+<div class="text-[10px] text-on-surface-variant font-mono uppercase tracking-widest">tunnel-cli — bash</div>
+<div class="w-12"></div>
+</div>
+<div class="p-6 font-mono text-sm leading-relaxed bg-surface-container-lowest">
+<div class="flex gap-4">
+<span class="text-primary opacity-50">01</span>
+<span class="text-secondary">$</span>
+<span class="text-on-surface">secret-tunnel push --file ./env.production</span>
+</div>
+<div class="flex gap-4 mt-1">
+<span class="text-primary opacity-50">02</span>
+<span class="text-on-surface-variant">// Encrypting with AES-256-GCM...</span>
+</div>
+<div class="flex gap-4 mt-1">
+<span class="text-primary opacity-50">03</span>
+<span class="text-primary">DONE</span>
+<span class="text-on-surface">Tunnel created: </span>
+<span class="text-secondary underline decoration-secondary/30">https://stnl.io/v/6j8k-2l9m-0p1q</span>
+</div>
+<div class="flex gap-4 mt-1">
+<span class="text-primary opacity-50">04</span>
+<span class="text-on-surface-variant text-xs italic tracking-tight">Access limited to 1 view. Self-destruct in 24h.</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- The Pipeline Section -->
+<section class="py-32 bg-surface-container-low">
+<div class="max-w-7xl mx-auto px-8">
+<div class="mb-20">
+<h2 class="text-4xl font-headline font-bold mb-4">// The Pipeline</h2>
+<p class="text-on-surface-variant max-w-xl">A visual journey of your data through our zero-knowledge architecture.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="p-8 bg-surface rounded-lg border border-white/5 flex flex-col gap-6">
+<div class="w-12 h-12 rounded bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl" data-icon="browser_updated">browser_updated</span>
+</div>
+<div>
+<h4 class="font-headline font-bold text-lg mb-2">1. Client-Side</h4>
+<p class="text-sm text-on-surface-variant leading-relaxed">Encryption happens in your browser. The plain text never leaves your device.</p>
+</div>
+</div>
+<div class="p-8 bg-surface rounded-lg border border-white/5 flex flex-col gap-6 translate-y-4">
+<div class="w-12 h-12 rounded bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+<div>
+<h4 class="font-headline font-bold text-lg mb-2">2. AES-256-GCM</h4>
+<p class="text-sm text-on-surface-variant leading-relaxed">Data is transformed into military-grade cyphertext using unique session keys.</p>
+</div>
+</div>
+<div class="p-8 bg-surface rounded-lg border border-white/5 flex flex-col gap-6">
+<div class="w-12 h-12 rounded bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl" data-icon="database" style="font-variation-settings: 'FILL' 1;">database</span>
+</div>
+<div>
+<h4 class="font-headline font-bold text-lg mb-2">3. Hashed Vault</h4>
+<p class="text-sm text-on-surface-variant leading-relaxed">Even we can't read it. Only the owner of the decryption link holds the key.</p>
+</div>
+</div>
+<div class="p-8 bg-surface rounded-lg border border-white/5 flex flex-col gap-6 translate-y-4">
+<div class="w-12 h-12 rounded bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl" data-icon="rocket_launch" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+</div>
+<div>
+<h4 class="font-headline font-bold text-lg mb-2">4. Recipient</h4>
+<p class="text-sm text-on-surface-variant leading-relaxed">Data is decrypted locally by the recipient, then the tunnel is permanently destroyed.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- CLI-First Workflow Section -->
+<section class="py-32 relative overflow-hidden bg-background">
+<div class="absolute inset-0 bg-[radial-gradient(circle_at_0%_100%,rgba(246,190,57,0.03)_0%,transparent_50%)]"></div>
+<div class="max-w-7xl mx-auto px-8 relative z-10">
+<div class="flex flex-col lg:flex-row items-center gap-16">
+<div class="lg:w-1/2">
+<div class="inline-flex items-center gap-2 mb-6 px-3 py-1 rounded-sm bg-primary/10 text-primary text-[10px] font-mono uppercase tracking-widest">
+                        Developer Experience
+                    </div>
+<h2 class="text-4xl md:text-5xl font-headline font-bold mb-6 tracking-tight">CLI-First Workflow</h2>
+<p class="text-on-surface-variant text-lg mb-8 leading-relaxed max-w-lg">
+                        Never leave your environment. SecretTunnel is built for developers who live in the terminal. Share environment variables, configuration strings, and sensitive snippets without context switching.
+                    </p>
+<ul class="space-y-4 mb-10">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-1" data-icon="check_circle">check_circle</span>
+<div class="text-on-surface"><span class="font-bold">Pipe anything:</span> Send command outputs directly into an encrypted tunnel.</div>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-1" data-icon="check_circle">check_circle</span>
+<div class="text-on-surface"><span class="font-bold">Zero Setup:</span> Use via <code class="bg-surface-container-high px-1.5 py-0.5 rounded font-mono text-sm text-secondary">npx</code> without permanent installation.</div>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-1" data-icon="check_circle">check_circle</span>
+<div class="text-on-surface"><span class="font-bold">Script Friendly:</span> Easily integrate with your CI/CD pipelines and local scripts.</div>
+</li>
+</ul>
+<button class="flex items-center gap-2 px-8 py-4 border border-primary/30 text-primary font-headline font-bold rounded-sm hover:bg-primary/5 transition-all">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+                        Read CLI Docs
+                    </button>
+</div>
+<div class="lg:w-1/2 w-full">
+<div class="relative group">
+<div class="absolute -inset-1 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-lg blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+<div class="relative bg-[#0e0e0f] rounded-lg border border-white/10 overflow-hidden terminal-shadow">
+<div class="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-surface-container-low">
+<div class="flex gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-white/10"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-white/10"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-white/10"></div>
+</div>
+<div class="text-[10px] text-on-surface-variant font-mono uppercase tracking-widest opacity-50">Local Shell</div>
+<div class="w-10"></div>
+</div>
+<div class="p-8 font-mono text-sm leading-relaxed text-on-surface">
+<div class="mb-4">
+<span class="text-primary opacity-50">~</span> <span class="text-secondary">$</span> cat .env.local | npx secrettnl push
+</div>
+<div class="mb-2 text-on-surface-variant italic">
+                                // Scanning input...<br/>
+                                // Found 12 environment variables.<br/>
+                                // Initializing client-side vault...
+                            </div>
+<div class="mt-4 flex items-center gap-3 py-2 px-4 bg-primary/5 border border-primary/20 rounded-sm">
+<span class="material-symbols-outlined text-primary text-base" data-icon="check_circle">check_circle</span>
+<span class="text-primary">Tunnel Ready:</span>
+<span class="text-secondary underline underline-offset-4">stnl.io/v/4k7j-9r2w</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Features Grid -->
+<section class="py-32">
+<div class="max-w-7xl mx-auto px-8">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<div class="md:col-span-8 bg-surface-container-high p-12 rounded-lg relative overflow-hidden flex flex-col justify-end min-h-[400px]">
+<div class="absolute top-0 right-0 p-8">
+<span class="material-symbols-outlined text-9xl text-primary opacity-10" data-icon="bolt">bolt</span>
+</div>
+<h3 class="text-3xl font-headline font-bold mb-4">Burn After Read</h3>
+<p class="text-on-surface-variant text-lg max-w-md">Our ultimate security feature. Tunnels can be configured to self-destruct immediately after a single successful decryption attempt.</p>
+</div>
+<div class="md:col-span-4 bg-surface-container-low p-10 rounded-lg flex flex-col justify-center border border-white/5">
+<span class="material-symbols-outlined text-4xl text-primary mb-6" data-icon="timer">timer</span>
+<h3 class="text-xl font-headline font-bold mb-3">Configurable TTL</h3>
+<p class="text-on-surface-variant text-sm">Set your secrets to expire in 1 hour, 1 day, or 1 week. Time-bound security for temporary access.</p>
+</div>
+<div class="md:col-span-4 bg-surface-container-low p-10 rounded-lg flex flex-col justify-center border border-white/5">
+<span class="material-symbols-outlined text-4xl text-primary mb-6" data-icon="webhook">webhook</span>
+<h3 class="text-xl font-headline font-bold mb-3">Webhook Notifications</h3>
+<p class="text-on-surface-variant text-sm">Get notified instantly when your secret has been accessed or when it expires naturally.</p>
+</div>
+<div class="md:col-span-8 bg-surface-container-highest p-12 rounded-lg flex flex-col justify-center border border-primary/20">
+<div class="flex items-center gap-6">
+<div class="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl text-primary" data-icon="visibility_off" style="font-variation-settings: 'FILL' 1;">visibility_off</span>
+</div>
+<div>
+<h3 class="text-3xl font-headline font-bold mb-2">Zero-Knowledge Architecture</h3>
+<p class="text-on-surface-variant text-lg">We never see your passwords, keys, or secrets. Every bit of data is encrypted before it touches our servers.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Trust Signals -->
+<section class="py-20 border-y border-white/5 bg-surface-container-lowest">
+<div class="max-w-7xl mx-auto px-8 flex flex-col md:flex-row items-center justify-between gap-12">
+<div class="text-sm font-mono uppercase tracking-[0.3em] text-on-surface-variant opacity-50">Trusted by modern dev teams</div>
+<div class="flex flex-wrap justify-center items-center gap-12 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all">
+<div class="flex items-center gap-2">
+<svg class="w-6 h-6 fill-on-surface" viewbox="0 0 24 24"><path d="M13 12h7.4l-7.4-9.8V12zM11 12H3.6l7.4 9.8V12z"></path></svg>
+<span class="font-headline font-bold tracking-tight">Next.js</span>
+</div>
+<div class="flex items-center gap-2">
+<svg class="w-6 h-6 fill-on-surface" viewbox="0 0 24 24"><path d="M1.1 18C.5 18 0 17.5 0 16.9V7.1C0 6.5.5 6 1.1 6H22.9C23.5 6 24 6.5 24 7.1V16.9C24 17.5 23.5 18 22.9 18H1.1ZM4.4 14.6H7.1V9.4H4.4V14.6ZM10.4 9.4H8.2V14.6H10.4V9.4ZM13.8 9.4H11.5V14.6H13.8V9.4ZM19.6 11.4V9.4H14.8V14.6H17V12.9H18.3V11.4H17V11.4H19.6Z"></path></svg>
+<span class="font-headline font-bold tracking-tight">TypeScript</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined" data-icon="policy">policy</span>
+<span class="font-headline font-bold tracking-tight">MIT Licensed</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined" data-icon="verified_user">verified_user</span>
+<span class="font-headline font-bold tracking-tight">Audit Ready</span>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA Section -->
+<section class="py-40 relative overflow-hidden">
+<div class="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(246,190,57,0.05)_0%,transparent_50%)]"></div>
+<div class="max-w-4xl mx-auto px-8 text-center relative z-10">
+<h2 class="text-5xl md:text-7xl font-headline font-extrabold tracking-tight mb-8">Ready to secure your tunnel?</h2>
+<p class="text-on-surface-variant text-xl mb-12 max-w-2xl mx-auto">Start sharing sensitive configuration, credentials, and private notes with complete peace of mind. No account required to start.</p>
+<div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+<button class="cta-glow text-on-primary font-headline font-extrabold px-12 py-5 text-xl rounded-sm hover:shadow-[0_0_30px_rgba(246,190,57,0.3)] active:scale-95 transition-all">
+                        Create Secure Tunnel
+                    </button>
+<button class="px-12 py-5 border border-outline-variant text-on-surface font-headline font-bold rounded-sm hover:bg-surface-variant/20 transition-all">
+                        View Pricing
+                    </button>
+</div>
+<div class="mt-12 flex items-center justify-center gap-8 text-on-surface-variant text-sm font-mono">
+<span class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg" data-icon="check_circle">check_circle</span> No cookies</span>
+<span class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg" data-icon="check_circle">check_circle</span> No tracking</span>
+<span class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg" data-icon="check_circle">check_circle</span> Just privacy</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-12 border-t border-white/5 bg-[#131314] dark:bg-[#131314]">
+<div class="flex flex-col md:flex-row justify-between items-center max-w-7xl mx-auto px-8 gap-6">
+<div class="flex flex-col gap-2">
+<div class="text-lg font-bold text-[#F6BE39] font-['Space_Grotesk']">SecretTunnel</div>
+<p class="text-slate-500 font-['Space_Grotesk'] text-[10px] uppercase tracking-widest leading-loose">© 2024 SecretTunnel Digital Identity. Built for the Terminal Vault.</p>
+</div>
+<div class="flex gap-8">
+<a class="font-['Space_Grotesk'] text-sm uppercase tracking-widest text-slate-500 hover:text-[#F6BE39] transition-colors duration-200 active:translate-y-[-2px] transition-transform" href="#">Security</a>
+<a class="font-['Space_Grotesk'] text-sm uppercase tracking-widest text-slate-500 hover:text-[#F6BE39] transition-colors duration-200 active:translate-y-[-2px] transition-transform" href="#">Privacy</a>
+<a class="font-['Space_Grotesk'] text-sm uppercase tracking-widest text-slate-500 hover:text-[#F6BE39] transition-colors duration-200 active:translate-y-[-2px] transition-transform" href="#">Terms</a>
+<a class="font-['Space_Grotesk'] text-sm uppercase tracking-widest text-slate-500 hover:text-[#F6BE39] transition-colors duration-200 active:translate-y-[-2px] transition-transform" href="#">Status</a>
+<a class="font-['Space_Grotesk'] text-sm uppercase tracking-widest text-slate-500 hover:text-[#F6BE39] transition-colors duration-200 active:translate-y-[-2px] transition-transform text-[#F6BE39]" href="#">API</a>
+</div>
+</div>
+</footer>
+</body></html>

@@ -1,22 +1,26 @@
 import type { Metadata } from "next";
-import { Geist, IBM_Plex_Mono } from "next/font/google";
+import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
-const geist = Geist({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-geist",
+  variable: "--font-inter",
 });
 
-const plexMono = IBM_Plex_Mono({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-plex-mono",
+  variable: "--font-space-grotesk",
+});
+
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
 });
 
 export const metadata: Metadata = {
-  title: "SecretTunnel",
+  title: "SecretTunnel | Terminal Vault Security",
   description: "Share a secret. End-to-end encrypted. Burned after reading.",
 };
 
@@ -26,8 +30,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geist.variable} ${plexMono.variable} dark`}>
-      <body className="min-h-screen bg-[#0c0c0c] text-[#f0ece4] font-sans antialiased selection:bg-[#d4a84b] selection:text-[#0c0c0c]">
+    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${jetBrainsMono.variable} dark`}>
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+      </head>
+      <body className="min-h-screen bg-background text-on-background font-body antialiased selection:bg-primary selection:text-on-primary">
         {children}
         <Analytics />
         <Toaster 
@@ -35,11 +42,11 @@ export default function RootLayout({
           position="bottom-center" 
           toastOptions={{ 
             style: { 
-              background: '#161616', 
-              border: '1px solid #2a2a2a', 
-              color: '#f0ece4', 
-              borderRadius: '2px', // rounded-sm approx
-              fontFamily: 'var(--font-geist)'
+              background: '#131314', 
+              border: '1px solid rgba(246, 190, 57, 0.2)', 
+              color: '#e5e2e3', 
+              borderRadius: '2px',
+              fontFamily: 'var(--font-inter)'
             } 
           }} 
         />
