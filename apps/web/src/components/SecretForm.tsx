@@ -7,7 +7,11 @@ import { toast } from "sonner";
 import { generateKey, generateSalt, applyPasswordLayer, encrypt, exportKey } from "@repo/encryption";
 import { validateWebhookUrl } from "@/lib/webhook-url";
 
-export function SecretForm() {
+type SecretFormProps = {
+  onSecretCreated?: () => void;
+};
+
+export function SecretForm({ onSecretCreated }: SecretFormProps) {
   const [content, setContent] = useState("");
   const [ttl, setTtl] = useState("86400"); // Default 24h (1 day = 86400s)
   const [password, setPassword] = useState("");
@@ -68,6 +72,7 @@ export function SecretForm() {
       setWebhookUrl("");
       setWebhookError(null);
       setShowPassword(false);
+      onSecretCreated?.();
     } catch (error) {
       console.error(error);
       if (axios.isAxiosError(error)) {

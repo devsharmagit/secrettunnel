@@ -49,6 +49,7 @@ const tabs: Array<{
 
 export function DashboardClient({ user }: DashboardClientProps) {
   const [activeTab, setActiveTab] = useState<DashboardTab>("secrets");
+  const [mountedTabs, setMountedTabs] = useState<Set<DashboardTab>>(() => new Set(["secrets"]));
   const [isNewSecretOpen, setIsNewSecretOpen] = useState(false);
   const [auditRefreshKey, setAuditRefreshKey] = useState(0);
 
@@ -57,6 +58,13 @@ export function DashboardClient({ user }: DashboardClientProps) {
 
     if (requestedTab === "secrets" || requestedTab === "vaults" || requestedTab === "settings") {
       setActiveTab(requestedTab);
+      setMountedTabs((current) => {
+        if (current.has(requestedTab)) return current;
+
+        const next = new Set(current);
+        next.add(requestedTab);
+        return next;
+      });
     }
   }, []);
 
@@ -65,12 +73,15 @@ export function DashboardClient({ user }: DashboardClientProps) {
     [activeTab]
   );
 
-  const handleSheetOpenChange = (open: boolean) => {
-    setIsNewSecretOpen(open);
+  const handleTabChange = (tab: DashboardTab) => {
+    setActiveTab(tab);
+    setMountedTabs((current) => {
+      if (current.has(tab)) return current;
 
-    if (!open) {
-      setAuditRefreshKey((current) => current + 1);
-    }
+      const next = new Set(current);
+      next.add(tab);
+      return next;
+    });
   };
 
   return (
@@ -99,7 +110,7 @@ export function DashboardClient({ user }: DashboardClientProps) {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`flex min-h-16 items-center gap-3 rounded-md px-3 py-3 text-left transition-colors ${
                   selected
                     ? "bg-[#1f1f1f] text-[#f0ece4]"
@@ -141,15 +152,25 @@ export function DashboardClient({ user }: DashboardClientProps) {
         </div>
       ) : null}
 
-      {activeTab === "secrets" ? (
-        <AuditTable key={auditRefreshKey} onCreateSecret={() => setIsNewSecretOpen(true)} />
+      {mountedTabs.has("secrets") ? (
+        <div hidden={activeTab !== "secrets"}>
+          <AuditTable key={auditRefreshKey} onCreateSecret={() => setIsNewSecretOpen(true)} />
+        </div>
       ) : null}
 
-      {activeTab === "vaults" ? <VersionedSecretsSection /> : null}
+      {mountedTabs.has("vaults") ? (
+        <div hidden={activeTab !== "vaults"}>
+          <VersionedSecretsSection />
+        </div>
+      ) : null}
 
-      {activeTab === "settings" ? <AccountSettings user={user} /> : null}
+      {mountedTabs.has("settings") ? (
+        <div hidden={activeTab !== "settings"}>
+          <AccountSettings user={user} />
+        </div>
+      ) : null}
 
-      <Sheet open={isNewSecretOpen} onOpenChange={handleSheetOpenChange}>
+      <Sheet open={isNewSecretOpen} onOpenChange={setIsNewSecretOpen}>
         <SheetContent
           side="right"
           className="w-full overflow-y-auto border-[#2a2a2a] bg-[#0c0c0c] p-0 text-[#f0ece4] sm:max-w-[680px]"
@@ -164,7 +185,7 @@ export function DashboardClient({ user }: DashboardClientProps) {
           </SheetHeader>
 
           <div className="px-6 py-6">
-            <SecretForm />
+            <SecretForm onSecretCreated={() => setAuditRefreshKey((current) => current + 1)} />
           </div>
         </SheetContent>
       </Sheet>
