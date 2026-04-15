@@ -50,7 +50,7 @@ export function CLISection() {
           {/* Left — Text */}
           <div className="w-full">
             <p className="font-mono text-primary text-sm tracking-widest uppercase mb-4">
-              // CLI
+              {"// CLI"}
             </p>
             <h2 className="font-headline text-3xl md:text-4xl font-bold text-on-surface tracking-tight mb-6">
               Push and pull from anywhere.

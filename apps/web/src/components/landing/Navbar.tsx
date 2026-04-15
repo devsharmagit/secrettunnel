@@ -4,7 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-export function Navbar() {
+type NavbarProps = {
+  isLoggedIn?: boolean;
+};
+
+export function Navbar({ isLoggedIn = false }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -24,20 +28,22 @@ export function Navbar() {
     >
       <nav className="flex justify-between items-center max-w-7xl mx-auto px-6 h-16">
         <div className="font-headline text-xl font-bold tracking-tight text-on-surface">
-          <span className="text-primary">//</span> SecretTunnel
+          <span className="text-primary">{"//"}</span> SecretTunnel
         </div>
         <div className="flex items-center gap-4">
+          {!isLoggedIn ? (
+            <Link
+              href="/signin"
+              className="text-sm text-on-surface-variant hover:text-on-surface transition-colors duration-200"
+            >
+              Sign In
+            </Link>
+          ) : null}
           <Link
-            href="/signin"
-            className="text-sm text-on-surface-variant hover:text-on-surface transition-colors duration-200"
-          >
-            Sign In
-          </Link>
-          <Link
-            href="/dashboard"
+            href={isLoggedIn ? "/dashboard" : "/share"}
             className="hidden md:flex cta-glow text-surface font-semibold px-5 py-2 text-sm rounded-md transition-all duration-200"
           >
-            Share a Secret
+            {isLoggedIn ? "Dashboard" : "Share a Secret"}
           </Link>
         </div>
       </nav>

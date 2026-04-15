@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Copy, Trash2, Plus, X, Lock, ExternalLink, AlertTriangle } from "lucide-react";
+import { Copy, Trash2, X, Lock, ExternalLink, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import { generateKey, encrypt, exportKey } from "@repo/encryption";
@@ -173,7 +173,7 @@ export function VersionedSecretsSection() {
   return (
     <>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 mt-16">
+      <div className="flex flex-col justify-between gap-4 mb-6 sm:flex-row sm:items-start">
         <div>
           <h2 className="font-sans font-medium text-[20px] text-[#f0ece4] mb-1 tracking-tight">
             Versioned Secret Groups
@@ -185,10 +185,9 @@ export function VersionedSecretsSection() {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-sm border border-[#d4a84b] px-4 font-sans text-[13px] font-medium text-[#d4a84b] transition-colors outline-none hover:bg-[#d4a84b] hover:text-[#0c0c0c]"
+          className="inline-flex h-10 w-full shrink-0 items-center justify-center rounded-md bg-[#d4a84b] px-4 font-sans text-[14px] font-semibold text-[#0c0c0c] transition-colors outline-none hover:bg-[#e8bf6a] disabled:opacity-50 sm:w-auto"
         >
-          <Plus className="size-3.5" />
-          New Group
+          + New Group
         </button>
       </div>
 

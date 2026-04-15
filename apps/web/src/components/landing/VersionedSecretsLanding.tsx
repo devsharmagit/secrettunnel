@@ -21,7 +21,7 @@ export function VersionedSecretsLanding() {
           {/* Left — Text */}
           <div>
             <p className="font-mono text-primary text-sm tracking-widest uppercase mb-4">
-              // Versioned Secrets
+              {"// Versioned Secrets"}
             </p>
             <h2 className="font-headline text-3xl md:text-4xl font-bold text-on-surface tracking-tight mb-4">
               Track changes. Securely.

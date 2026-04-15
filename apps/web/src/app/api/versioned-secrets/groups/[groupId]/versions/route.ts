@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createSecretVersionSchema } from "@/lib/schema";
@@ -79,9 +80,9 @@ export async function POST(
           { versionNumber: nextVersionNumber },
           { status: 201 },
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Prisma unique constraint error
-        if (err.code === "P2002") {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
           // conflict → retry
           if (attempt === MAX_RETRIES - 1) {
             return NextResponse.json(

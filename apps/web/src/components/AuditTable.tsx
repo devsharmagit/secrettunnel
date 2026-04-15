@@ -115,7 +115,11 @@ const getWebhookStatusStyles = (status: NonNullable<Secret["webhookStatus"]>) =>
   }
 };
 
-export function AuditTable() {
+type AuditTableProps = {
+  onCreateSecret?: () => void;
+};
+
+export function AuditTable({ onCreateSecret }: AuditTableProps) {
   const [secrets, setSecrets] = useState<Secret[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -189,8 +193,9 @@ export function AuditTable() {
     } catch (error) {
       console.error("Failed to burn secret:", error);
     } finally {   
-    setBurningId(null);
-  };}
+      setBurningId(null);
+    }
+  };
 
   const now = Date.now();
   const stats = useMemo(() => {
@@ -252,9 +257,19 @@ export function AuditTable() {
           <Lock className="size-8 text-[#2a2a2a] mb-4" />
           <p className="font-sans text-[16px] text-[#8a8a8a] mb-1">No secrets yet.</p>
           <p className="font-sans text-[13px] text-[#4a4a4a] mb-4">Create your first encrypted secret link.</p>
-          <Link href="/" className="font-sans text-[13px] text-[#d4a84b] hover:text-[#e8bf6a] transition-colors">
-            Get started →
-          </Link>
+          {onCreateSecret ? (
+            <button
+              type="button"
+              onClick={onCreateSecret}
+              className="font-sans text-[13px] text-[#d4a84b] transition-colors hover:text-[#e8bf6a]"
+            >
+              Get started →
+            </button>
+          ) : (
+            <Link href="/" className="font-sans text-[13px] text-[#d4a84b] hover:text-[#e8bf6a] transition-colors">
+              Get started →
+            </Link>
+          )}
         </div>
         </div>
       </>

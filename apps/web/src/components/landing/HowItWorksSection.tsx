@@ -82,7 +82,7 @@ export function HowItWorksSection() {
         {/* Mobile Section Header (Normal Flow) */}
         <div className="pb-12 lg:hidden">
           <p className="font-mono text-primary text-sm tracking-widest uppercase mb-4">
-            // How it works
+            {"// How it works"}
           </p>
           <h2 className="font-headline text-3xl sm:text-4xl font-bold text-on-surface tracking-tight">
             Four layers. Zero trust.
@@ -96,7 +96,7 @@ export function HowItWorksSection() {
               {/* Heading — now sticky */}
               <div className="mb-8">
                 <p className="font-mono text-primary text-sm tracking-widest uppercase mb-3">
-                  // How it works
+                  {"// How it works"}
                 </p>
                 <h2 className="font-headline text-3xl font-bold text-on-surface tracking-tight">
                   Four layers.<br />Zero trust.

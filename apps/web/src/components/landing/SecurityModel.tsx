@@ -46,7 +46,7 @@ export function SecurityModel() {
           )}
         >
           <p className="font-mono text-primary text-sm tracking-widest uppercase mb-4">
-            // Security Model
+            {"// Security Model"}
           </p>
           <h2 className="font-headline text-3xl md:text-4xl font-bold text-on-surface tracking-tight mb-12">
             Threat mitigations.

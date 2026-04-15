@@ -18,7 +18,7 @@ export function Footer() {
           {/* Logo column (spans 2 on large) */}
           <div className="space-y-5 lg:col-span-2 pr-8">
             <div className="font-headline text-lg font-bold tracking-tight text-on-surface">
-              <span className="text-primary">//</span> SecretTunnel
+              <span className="text-primary">{"//"}</span> SecretTunnel
             </div>
             <p className="text-outline text-sm leading-relaxed max-w-sm">
               Zero-knowledge secret sharing for developers. Encrypted in the

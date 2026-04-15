@@ -4,10 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { diffLines, type Change } from "diff";
-import { Copy, Trash2, ChevronDown, Plus, AlertTriangle } from "lucide-react";
+import { Copy, Trash2, ChevronDown, Plus, AlertTriangle, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import { importKey, encrypt, decrypt } from "@repo/encryption";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface VersionData {
   id: string;
@@ -25,6 +28,9 @@ export default function VersionedSecretPage({
   const router = useRouter();
   const [groupId, setGroupId] = useState<string>("");
   const [keyBase64, setKeyBase64] = useState<string | null>(null);
+  const [keyInput, setKeyInput] = useState("");
+  const [keyError, setKeyError] = useState<string | null>(null);
+  const [isImportingKey, setIsImportingKey] = useState(false);
   const [cryptoKey, setCryptoKey] = useState<CryptoKey | null>(null);
   const [versions, setVersions] = useState<VersionData[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<number>(0);
@@ -49,22 +55,17 @@ export default function VersionedSecretPage({
   useEffect(() => {
     const hash = window.location.hash;
     if (!hash || !hash.includes("key=")) {
-      setError(
-        "No decryption key found in URL. Make sure you are using the full master link.",
-      );
       setIsLoading(false);
       return;
     }
 
     const key = new URLSearchParams(hash.substring(1)).get("key");
     if (!key) {
-      setError(
-        "No decryption key found in URL. Make sure you are using the full master link.",
-      );
       setIsLoading(false);
       return;
     }
 
+    setKeyInput(key);
     setKeyBase64(key);
   }, []);
 
@@ -72,13 +73,37 @@ export default function VersionedSecretPage({
   useEffect(() => {
     if (!keyBase64) return;
 
+    setIsLoading(true);
+    setIsImportingKey(true);
+    setKeyError(null);
+
     importKey(keyBase64)
-      .then(setCryptoKey)
+      .then((key) => {
+        setCryptoKey(key);
+        window.history.replaceState(null, "", `${window.location.pathname}#key=${encodeURIComponent(keyBase64)}`);
+      })
       .catch(() => {
-        setError("Failed to import decryption key. The key may be corrupted.");
+        setCryptoKey(null);
+        setKeyBase64(null);
+        setKeyError("That key could not be read. Paste the full master link or the key after #key=.");
         setIsLoading(false);
+      })
+      .finally(() => {
+        setIsImportingKey(false);
       });
   }, [keyBase64]);
+
+  const handleKeySubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const extractedKey = extractKeyFromInput(keyInput);
+    if (!extractedKey) {
+      setKeyError("Enter the master key or paste the full master link.");
+      return;
+    }
+
+    setKeyBase64(extractedKey);
+  };
 
   // Fetch versions once we have groupId
   const fetchVersions = useCallback(async () => {
@@ -164,6 +189,10 @@ export default function VersionedSecretPage({
           setDiffChanges(changes);
         }
       } catch {
+        setCryptoKey(null);
+        setKeyBase64(null);
+        setIsLoading(false);
+        setKeyError("Decryption failed. Check the key and try again.");
         toast.error("Decryption failed. The key might be incorrect.");
       } finally {
         setIsDecrypting(false);
@@ -222,20 +251,88 @@ export default function VersionedSecretPage({
     }
   };
 
+  if (!cryptoKey && !keyBase64 && !isLoading) {
+    return (
+      <main className="min-h-screen bg-[#131314]">
+        <VersionedSecretHeader />
+
+        <section className="mx-auto flex min-h-[calc(100vh-64px)] w-full max-w-[960px] items-center justify-center px-4 py-12">
+          <div className="w-full max-w-xl rounded-md border border-[#2a2a2a] bg-[#0c0c0c] p-5 shadow-2xl shadow-black/20 sm:p-6">
+            <div className="mb-6 flex items-start gap-4">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-md border border-[#2a2a2a] bg-[#161616] text-[#d4a84b]">
+                <KeyRound className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="font-sans text-[20px] font-medium tracking-tight text-[#f0ece4]">
+                  Enter the master key
+                </h1>
+                <p className="mt-1 font-sans text-[13px] leading-6 text-[#8a8a8a]">
+                  Paste the full master link or only the key value from the URL fragment. Decryption still happens in your browser.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleKeySubmit} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="versioned-secret-key" className="font-sans text-[13px] text-[#f0ece4]">
+                  Master key
+                </Label>
+                <Input
+                  id="versioned-secret-key"
+                  value={keyInput}
+                  onChange={(event) => {
+                    setKeyInput(event.target.value);
+                    setKeyError(null);
+                  }}
+                  placeholder="Paste key or https://.../vs/...#key=..."
+                  className="h-11 rounded-md border-[#2a2a2a] bg-[#161616] px-3 font-mono text-[13px] text-[#f0ece4] placeholder:text-[#4a4a4a] focus-visible:border-[#d4a84b] focus-visible:ring-[#d4a84b]/20"
+                  autoComplete="off"
+                  autoFocus
+                  aria-invalid={Boolean(keyError)}
+                  aria-describedby={keyError ? "versioned-secret-key-error" : undefined}
+                />
+                {keyError ? (
+                  <p id="versioned-secret-key-error" className="font-sans text-[12px] text-[#b33a3a]">
+                    {keyError}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="rounded-md border border-[#2a2a2a] bg-[#161616] px-4 py-3">
+                <p className="font-sans text-[12px] leading-5 text-[#8a8a8a]">
+                  The key is never sent to the server. It is used locally to decrypt the version history after your account access is checked.
+                </p>
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 rounded-md border-[#2a2a2a] bg-[#161616] px-4 text-[#8a8a8a] hover:border-[#d4a84b] hover:bg-[#1f1f1f] hover:text-[#d4a84b]"
+                  asChild
+                >
+                  <Link href="/dashboard?tab=vaults">Back to groups</Link>
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isImportingKey || !keyInput.trim()}
+                  className="h-10 rounded-md bg-[#d4a84b] px-4 font-sans text-[14px] font-semibold text-[#0c0c0c] hover:bg-[#e8bf6a]"
+                >
+                  {isImportingKey ? "Unlocking..." : "Unlock versions"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   // Error state
   if (error) {
     return (
       <main className="min-h-screen">
-        <header className="flex h-13 items-center border-b border-[#2a2a2a] bg-[#0c0c0c]">
-          <div className="mx-auto w-full max-w-[960px] px-4 flex items-center justify-between">
-            <Link
-              href="/"
-              className="font-sans font-semibold text-[15px] tracking-tight text-[#f0ece4] flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-            >
-              <span className="text-[#d4a84b]">{"//"}</span> SecretTunnel
-            </Link>
-          </div>
-        </header>
+        <VersionedSecretHeader />
         <section className="mx-auto w-full max-w-[960px] px-4 py-20 flex flex-col items-center justify-center min-h-[calc(100vh-172px)]">
           <div className="text-[#d4a84b] font-mono text-[48px] leading-none mb-6">
             !
@@ -261,16 +358,7 @@ export default function VersionedSecretPage({
   if (isLoading) {
     return (
       <main className="min-h-screen">
-        <header className="flex h-13 items-center border-b border-[#2a2a2a] bg-[#0c0c0c]">
-          <div className="mx-auto w-full max-w-[960px] px-4 flex items-center justify-between">
-            <Link
-              href="/"
-              className="font-sans font-semibold text-[15px] tracking-tight text-[#f0ece4] flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-            >
-              <span className="text-[#d4a84b]">{"//"}</span> SecretTunnel
-            </Link>
-          </div>
-        </header>
+        <VersionedSecretHeader />
         <section className="mx-auto w-full max-w-[960px] px-4 py-20 flex items-center justify-center min-h-[calc(100vh-172px)]">
           <span className="font-mono text-sm text-[#4a4a4a] animate-pulse">
             Loading versions...
@@ -286,22 +374,7 @@ export default function VersionedSecretPage({
 
   return (
     <main className="min-h-screen">
-      <header className="flex h-13 items-center border-b border-[#2a2a2a] bg-[#0c0c0c]">
-        <div className="mx-auto w-full max-w-[960px] px-4 flex items-center justify-between">
-          <Link
-            href="/"
-            className="font-sans font-semibold text-[15px] tracking-tight text-[#f0ece4] flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-          >
-            <span className="text-[#d4a84b]">{"//"}</span> SecretTunnel
-          </Link>
-          <Link
-            href="/dashboard"
-            className="font-sans text-[13px] text-[#8a8a8a] hover:text-[#d4a84b] transition-colors"
-          >
-            Dashboard
-          </Link>
-        </div>
-      </header>
+      <VersionedSecretHeader showDashboardLink />
 
       <section className="mx-auto w-full max-w-[960px] px-4 pt-12 pb-32">
         {/* Header */}
@@ -510,5 +583,47 @@ export default function VersionedSecretPage({
         </div>
       </section>
     </main>
+  );
+}
+
+function extractKeyFromInput(value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) return null;
+
+  if (trimmed.includes("#")) {
+    const fragment = trimmed.split("#").pop();
+    const key = fragment ? new URLSearchParams(fragment).get("key") : null;
+    return key?.trim() || null;
+  }
+
+  if (trimmed.includes("key=")) {
+    const key = new URLSearchParams(trimmed).get("key");
+    return key?.trim() || null;
+  }
+
+  return trimmed;
+}
+
+function VersionedSecretHeader({ showDashboardLink = true }: { showDashboardLink?: boolean }) {
+  return (
+    <header className="flex h-16 items-center border-b border-[#2a2a2a] bg-[#0c0c0c]">
+      <div className="mx-auto flex w-full max-w-[960px] items-center justify-between px-4">
+        <Link
+          href="/"
+          className="flex items-center gap-1.5 font-sans text-[15px] font-semibold tracking-tight text-[#f0ece4] transition-opacity hover:opacity-80"
+        >
+          <span className="text-[#d4a84b]">{"//"}</span> SecretTunnel
+        </Link>
+        {showDashboardLink ? (
+          <Link
+            href="/dashboard"
+            className="font-sans text-[13px] text-[#8a8a8a] transition-colors hover:text-[#d4a84b]"
+          >
+            Dashboard
+          </Link>
+        ) : null}
+      </div>
+    </header>
   );
 }

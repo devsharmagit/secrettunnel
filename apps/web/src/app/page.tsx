@@ -8,6 +8,7 @@ import { VersionedSecretsLanding } from "@/components/landing/VersionedSecretsLa
 import { SecurityModel } from "@/components/landing/SecurityModel";
 import { FinalCTA } from "@/components/landing/FinalCTA";
 import { Footer } from "@/components/landing/Footer";
+import { auth } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "SecretTunnel — Zero-Knowledge .env Secret Sharing",
@@ -21,10 +22,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
+
   return (
     <>
-      <Navbar />
+      <Navbar isLoggedIn={Boolean(session?.user)} />
       <main className="bg-surface">
         <HeroSection />
         <HowItWorksSection />

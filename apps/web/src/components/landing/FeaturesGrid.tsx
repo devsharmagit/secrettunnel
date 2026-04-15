@@ -59,7 +59,7 @@ export function FeaturesGrid() {
           )}
         >
           <p className="font-mono text-primary text-sm tracking-widest uppercase mb-4">
-            // Features
+            {"// Features"}
           </p>
           <h2 className="font-headline text-3xl sm:text-4xl md:text-5xl font-bold text-on-surface tracking-tight">
             Everything you need.

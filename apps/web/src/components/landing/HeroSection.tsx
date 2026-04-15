@@ -183,7 +183,7 @@ export function HeroSection() {
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12 w-full">
           <Link
-            href="/dashboard"
+            href="/share"
             className="cta-glow text-surface font-semibold px-8 py-3.5 rounded-md text-[15px] transition-all duration-200 sm:w-auto w-full max-w-[260px] text-center"
           >
             Share a Secret →

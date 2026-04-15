@@ -1,9 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AuditTable } from "@/components/AuditTable";
-import { VersionedSecretsSection } from "@/components/VersionedSecretsSection";
-import { AppHeader } from "@/components/AppHeader";
 import { auth } from "@/lib/auth";
+import { AppHeader } from "@/components/AppHeader";
+import { DashboardClient } from "./DashboardClient";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -13,31 +11,9 @@ export default async function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen">
-      <AppHeader maxWidthClass="max-w-[960px]" session={session} />
-
-      <section className="mx-auto w-full max-w-240 px-4 pt-12 pb-32">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
-          <div>
-            <h1 className="font-sans font-medium text-[20px] text-[#f0ece4] mb-1 tracking-tight">
-              Your Secrets
-            </h1>
-            <p className="font-sans text-[13px] text-[#8a8a8a]">
-              Secrets are end-to-end encrypted. Only you can see what you shared.
-            </p>
-          </div>
-          <Link
-            href="/"
-            className="inline-flex h-9 shrink-0 items-center justify-center rounded-sm border border-[#d4a84b] px-4 font-sans text-[13px] font-medium text-[#d4a84b] transition-colors outline-none hover:bg-[#d4a84b] hover:text-[#0c0c0c]"
-          >
-            + New Secret
-          </Link>
-        </div>
-
-        <AuditTable />
-
-        <VersionedSecretsSection />
-      </section>
+    <main className="min-h-screen bg-[#131314]">
+      <AppHeader maxWidthClass="max-w-6xl" session={session} />
+      <DashboardClient user={session.user} />
     </main>
   );
 }

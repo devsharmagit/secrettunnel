@@ -5,6 +5,7 @@ import { useRef, useState, useEffect } from "react";
 export function useInView(options?: IntersectionObserverInit) {
   const ref = useRef<HTMLDivElement>(null);
   const [isInView, setIsInView] = useState(false);
+  const { root = null, rootMargin, threshold } = options ?? {};
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia(
@@ -23,12 +24,12 @@ export function useInView(options?: IntersectionObserverInit) {
           observer.disconnect();
         }
       },
-      { threshold: 0.1, ...options }
+      { root, rootMargin, threshold: threshold ?? 0.1 }
     );
 
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
-  }, []);
+  }, [root, rootMargin, threshold]);
 
   return { ref, isInView };
 }
