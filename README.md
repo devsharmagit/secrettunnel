@@ -578,6 +578,8 @@ vercel deploy
 | `DATABASE_URL` | Web | ✅ | PostgreSQL connection string |
 | `NEXTAUTH_URL` | Web | ✅ | NextAuth callback URL |
 | `NEXTAUTH_SECRET` | Web | ✅ | NextAuth session secret |
+| `RESEND_API_KEY` | Web | ✅ | Resend API key for credential email verification |
+| `RESEND_FROM_EMAIL` | Web | ✅ | Verified sender, for example `SecretTunnel <noreply@example.com>` |
 | `GITHUB_ID` | Web | ❌ | GitHub OAuth app ID |
 | `GITHUB_SECRET` | Web | ❌ | GitHub OAuth app secret |
 | `UPSTASH_REDIS_REST_URL` | Web | ❌ | Redis URL for TTL/caching |
