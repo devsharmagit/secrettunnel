@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { createEmailVerificationToken } from "@/lib/email-verification";
+import { sendVerificationEmail } from "@/lib/email";
 import { hashPassword } from "@/lib/password";
-import { createUser } from "@/lib/user-store";
+import { createCredentialsUser } from "@/lib/user-store";
 
 const signupSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
@@ -23,10 +25,21 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await hashPassword(result.data.password);
-    const user = await createUser({
+    const user = await createCredentialsUser({
       name: result.data.name,
       email: result.data.email,
       passwordHash,
+    });
+    const { token } = await createEmailVerificationToken(user.id);
+
+    if (!user.email) {
+      throw new Error("Unable to send verification email.");
+    }
+
+    await sendVerificationEmail({
+      email: user.email,
+      name: user.name,
+      token,
     });
 
     return NextResponse.json(
@@ -34,6 +47,7 @@ export async function POST(request: Request) {
         id: user.id,
         name: user.name,
         email: user.email,
+        message: "Check your email for a verification link.",
       },
       { status: 201 }
     );

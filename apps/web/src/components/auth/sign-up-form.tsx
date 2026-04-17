@@ -1,18 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Eye, EyeOff, Github } from "lucide-react";
+import { CheckCircle2, Eye, EyeOff, Github } from "lucide-react";
 import { useState } from "react";
 import axios from "axios";
 
 export function SignUpPage({callbackUrl}:{callbackUrl: string}) {
-  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
 
   const calculateStrength = (pwd: string) => {
     let score = 0;
@@ -49,29 +48,51 @@ export function SignUpPage({callbackUrl}:{callbackUrl: string}) {
         password: pwd,
       });
 
-      const result = await signIn("credentials", {
-        email,
-        password: pwd,
-        redirect: false,
-        callbackUrl,
-      });
-
-      if (!result || result.error) {
-        setError("Account created, but automatic sign in failed.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      router.push(result.url ?? callbackUrl);
-      router.refresh();
+      setVerificationEmail(email);
     } catch (error) {
       const errorMessage = axios.isAxiosError(error) && error.response?.data?.error
         ? error.response.data.error
         : "Unable to create account.";
       setError(errorMessage);
+    } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (verificationEmail) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-4 py-8">
+        <div className="w-full max-w-100 bg-[#161616] border border-[#2a2a2a] rounded-sm p-8 shadow-none my-auto">
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-5 flex size-12 items-center justify-center rounded-full border border-[#4a7c59]/40 bg-[#4a7c59]/10 text-[#4a7c59]">
+              <CheckCircle2 className="size-6" />
+            </div>
+            <h1 className="font-sans font-semibold text-[18px] text-[#f0ece4] mb-2">
+              Check your email
+            </h1>
+            <p className="font-sans text-[13px] text-[#8a8a8a] leading-6">
+              We sent a verification link to{" "}
+              <span className="font-mono text-[#f0ece4] break-all">{verificationEmail}</span>.
+              Verify your email before signing in.
+            </p>
+            <Link
+              href={`/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+              className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-sm bg-[#d4a84b] px-4 font-sans text-[14px] font-semibold text-[#0c0c0c] transition-colors hover:bg-[#e8bf6a]"
+            >
+              Go to sign in
+            </Link>
+            <button
+              type="button"
+              onClick={() => setVerificationEmail(null)}
+              className="mt-4 font-sans text-[13px] text-[#8a8a8a] transition-colors hover:text-[#f0ece4]"
+            >
+              Use a different email
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen flex items-center justify-center p-4 py-8">

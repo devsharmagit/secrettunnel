@@ -6,7 +6,15 @@ import { signIn } from "next-auth/react";
 import { Eye, EyeOff, Github } from "lucide-react";
 import { useState } from "react";
 
-export function SignInForm({callbackUrl}:{callbackUrl: string}) {
+type VerificationStatus = "success" | "invalid" | "missing" | undefined;
+
+export function SignInForm({
+  callbackUrl,
+  verificationStatus,
+}: {
+  callbackUrl: string;
+  verificationStatus?: VerificationStatus;
+}) {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,7 +38,11 @@ export function SignInForm({callbackUrl}:{callbackUrl: string}) {
     });
 
     if (!result || result.error) {
-      setError("Invalid email or password.");
+      setError(
+        result?.error === "EMAIL_NOT_VERIFIED"
+          ? "Verify your email before signing in. Check your inbox for the verification link."
+          : "Invalid email or password."
+      );
       setIsSubmitting(false);
       return;
     }
@@ -50,6 +62,22 @@ export function SignInForm({callbackUrl}:{callbackUrl: string}) {
             Sign in to manage your secrets.
           </p>
         </div>
+
+        {verificationStatus ? (
+          <div
+            className={`mb-6 rounded-sm border px-4 py-3 font-sans text-[13px] leading-5 ${
+              verificationStatus === "success"
+                ? "border-[#4a7c59]/40 bg-[#4a7c59]/10 text-[#9fd0aa]"
+                : "border-[#b33a3a]/40 bg-[#b33a3a]/10 text-[#d98a8a]"
+            }`}
+          >
+            {verificationStatus === "success"
+              ? "Email verified. You can sign in now."
+              : verificationStatus === "missing"
+                ? "Verification link is missing a token."
+                : "Verification link is invalid or expired."}
+          </div>
+        ) : null}
 
         <button
           type="button"

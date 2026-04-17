@@ -172,6 +172,10 @@ NEXTAUTH_URL=http://localhost:3000
 # GitHub OAuth
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
+
+# Email verification
+RESEND_API_KEY=
+RESEND_FROM_EMAIL="SecretTunnel <noreply@example.com>"
 ```
 
 ```bash

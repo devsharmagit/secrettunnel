@@ -22,6 +22,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   accounts      Account[]
+  emailVerificationTokens EmailVerificationToken[]
 }
 
 model Account {
@@ -45,6 +46,17 @@ model Account {
   updatedAt            DateTime @updatedAt
 
   @@unique([provider, providerAccountId])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model SecretGroup {

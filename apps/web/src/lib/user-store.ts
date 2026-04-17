@@ -29,11 +29,12 @@ export async function findUserByEmail(email: string) {
     id: user.id,
     name: user.name,
     email: user.email,
+    emailVerified: user.emailVerified,
     passwordHash: credentialsAccount.password_hash,
   };
 }
 
-export async function createUser(input: {
+export async function createCredentialsUser(input: {
   name: string;
   email: string;
   passwordHash: string;
@@ -42,10 +43,47 @@ export async function createUser(input: {
 
   const existing = await prisma.user.findUnique({
     where: { email: normalizedEmail },
+    include: {
+      accounts: {
+        where: { provider: PROVIDER.CREDENTIALS },
+        take: 1,
+      },
+    },
   });
 
-  if (existing) {
+  if (existing?.emailVerified) {
     throw new Error("A user with this email already exists.");
+  }
+
+  if (existing) {
+    const credentialsAccount = existing.accounts[0];
+
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        name: input.name.trim(),
+      },
+    });
+
+    if (credentialsAccount) {
+      await prisma.account.update({
+        where: { id: credentialsAccount.id },
+        data: { password_hash: input.passwordHash },
+      });
+    } else {
+      await prisma.account.create({
+        data: {
+          userId: existing.id,
+          provider: PROVIDER.CREDENTIALS,
+          providerAccountId: normalizedEmail,
+          password_hash: input.passwordHash,
+        },
+      });
+    }
+
+    return prisma.user.findUniqueOrThrow({
+      where: { id: existing.id },
+    });
   }
 
   const user = await prisma.user.create({
