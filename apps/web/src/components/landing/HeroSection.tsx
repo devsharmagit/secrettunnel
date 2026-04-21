@@ -4,6 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+const LANDING_BASE_URL =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:3000"
+    : "https://secrettunnel.vercel.app";
+
 function HeroTerminal() {
   const command = "npx secrettnl push .env --ttl 24h";
   const [typedText, setTypedText] = useState("");
@@ -124,9 +129,7 @@ function HeroTerminal() {
                     <div className="h-3" />
                   ) : line.text === "url" ? (
                     <div className="pl-2">
-                      <span className="text-primary">
-                        https://secrettunnel.app/s/x9k2m
-                      </span>
+                      <span className="text-primary">{`${LANDING_BASE_URL}/s/x9k2m`}</span>
                       <span className="text-outline/50">#key=aB3dK9...</span>
                     </div>
                   ) : (

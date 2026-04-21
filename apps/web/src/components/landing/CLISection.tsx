@@ -4,6 +4,11 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useInView } from "@/hooks/useInView";
 
+const LANDING_BASE_URL =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:3000"
+    : "https://secrettunnel.vercel.app";
+
 function TerminalCard({
   title,
   children,
@@ -95,9 +100,7 @@ export function CLISection() {
               <div className="h-3" />
               <div className="text-[#34d399] pl-2">✓ Secret created</div>
               <div className="pl-2">
-                <span className="text-primary">
-                  https://secrettunnel.app/s/x9k2m
-                </span>
+                <span className="text-primary">{`${LANDING_BASE_URL}/s/x9k2m`}</span>
                 <span className="text-outline/50">#key=aB3dK9...</span>
               </div>
               <div className="text-outline text-xs pl-2 mt-1">
@@ -110,9 +113,7 @@ export function CLISection() {
               <div>
                 <span className="text-outline">$</span>
                 <span className="text-primary ml-2">npx secrettnl pull</span>
-                <span className="text-on-surface-variant ml-1">
-                  &quot;https://secrettunnel.app/s/x9k2m#key=aB3dK9...&quot;
-                </span>
+                <span className="text-on-surface-variant ml-1">{`"${LANDING_BASE_URL}/s/x9k2m#key=aB3dK9..."`}</span>
                 <span className="text-on-surface ml-1">--output .env</span>
               </div>
               <div className="h-3" />
