@@ -17,9 +17,9 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-10">
           {/* Logo column (spans 2 on large) */}
           <div className="space-y-5 lg:col-span-2 pr-8">
-            <div className="font-headline text-lg font-bold tracking-tight text-on-surface">
+            <Link href="/" className="inline-block font-headline text-lg font-bold tracking-tight text-on-surface hover:opacity-80 transition-opacity">
               <span className="text-primary">{"//"}</span> SecretTunnel
-            </div>
+            </Link>
             <p className="text-outline text-sm leading-relaxed max-w-sm">
               Zero-knowledge secret sharing for developers. Encrypted in the
               browser. Destroyed on read. The server never sees your plaintext.
@@ -68,7 +68,6 @@ export function Footer() {
                 </Link>
               </div>
             </div>
-            
           </div>
 
           {/* Product links */}

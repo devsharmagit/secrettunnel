@@ -27,10 +27,16 @@ export function Navbar({ isLoggedIn = false }: NavbarProps) {
       )}
     >
       <nav className="flex justify-between items-center max-w-7xl mx-auto px-6 h-16">
-        <div className="font-headline text-xl font-bold tracking-tight text-on-surface">
+        <Link href="/" className="font-headline text-xl font-bold tracking-tight text-on-surface hover:opacity-80 transition-opacity">
           <span className="text-primary">{"//"}</span> SecretTunnel
-        </div>
+        </Link>
         <div className="flex items-center gap-4">
+          <Link
+            href="/docs"
+            className="hidden md:flex text-sm text-on-surface-variant hover:text-on-surface transition-colors duration-200"
+          >
+            Docs
+          </Link>
           {!isLoggedIn ? (
             <Link
               href="/signin"

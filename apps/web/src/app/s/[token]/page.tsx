@@ -18,6 +18,12 @@ export default async function SecretPage({
           </Link>
           <nav className="flex items-center gap-5">
             <Link
+              href="/share"
+              className="text-[#f0ece4] text-[13px] font-sans font-medium hover:text-[#d4a84b] transition-colors"
+            >
+              Share Secret
+            </Link>
+            <Link
               className="text-[#8a8a8a] transition-colors hover:text-[#d4a84b]"
               href="https://github.com/devsharmagit"
               target="_blank"

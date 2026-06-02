@@ -173,13 +173,46 @@ export function SecretViewer({ token }: SecretViewerProps) {
           ENCRYPTED SECRET
         </p>
 
-        <pre className="bg-[#161616] border border-[#2a2a2a] text-[#f0ece4] text-[14px] font-mono p-6 rounded-sm whitespace-pre-wrap word-break mb-4 select-text max-w-[640px] w-full min-h-[140px]">
-          {plaintext}
-        </pre>
+        <div className="max-w-full">
+          <pre className="bg-[#161616] border border-[#2a2a2a] text-[#f0ece4] text-[14px] font-mono p-6 rounded-sm whitespace-pre-wrap break-all mb-4 select-text w-full min-h-[140px] overflow-hidden">
+            {plaintext}
+          </pre>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(plaintext);
+              toast.success("Copied to clipboard");
+            }}
+            className="mb-8 w-full sm:w-auto h-[40px] px-4 bg-[#2a2a2a] text-[#f0ece4] font-sans font-medium text-[13px] rounded-sm hover:bg-[#3a3a3a] transition-colors flex items-center justify-center gap-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy to clipboard
+          </button>
+        </div>
 
-        <p className="font-sans text-[13px] text-[#8a8a8a]">
-          This secret has been permanently destroyed. It cannot be accessed again.
-        </p>
+        <div className="flex flex-col gap-3 mt-2">
+          <p className="font-sans text-[13px] text-[#8a8a8a]">
+            This secret has been permanently destroyed. It cannot be accessed again.
+          </p>
+          <Link
+            href="/share"
+            className="font-sans font-medium text-[13px] text-[#d4a84b] hover:text-[#e8bf6a] transition-colors w-fit"
+          >
+            Share a new secret
+          </Link>
+        </div>
       </div>
     );
   }

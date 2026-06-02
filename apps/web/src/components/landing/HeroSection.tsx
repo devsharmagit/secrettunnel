@@ -192,6 +192,12 @@ export function HeroSection() {
             Share a Secret →
           </Link>
           <Link
+            href="/docs"
+            className="bg-transparent border border-primary/30 text-primary font-semibold px-8 py-3.5 rounded-md hover:bg-primary/5 transition-all duration-200 text-[15px] flex items-center justify-center gap-2 sm:w-auto w-full max-w-[260px]"
+          >
+            Read the Docs
+          </Link>
+          <Link
             href="https://github.com/devsharmagit/secrettunnel"
             target="_blank"
             rel="noopener noreferrer"

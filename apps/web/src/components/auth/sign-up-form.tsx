@@ -98,9 +98,9 @@ export function SignUpPage({callbackUrl}:{callbackUrl: string}) {
     <main className="min-h-screen flex items-center justify-center p-4 py-8">
       <div className="w-full max-w-100 bg-[#161616] border border-[#2a2a2a] rounded-sm p-8 shadow-none my-auto">
         <div className="flex flex-col items-center mb-8">
-          <h1 className="font-sans font-semibold text-[18px] text-[#f0ece4] mb-2 flex items-center gap-1.5">
+          <Link href="/" className="font-sans font-semibold text-[18px] text-[#f0ece4] mb-2 flex items-center gap-1.5 hover:opacity-80 transition-opacity">
             <span className="text-[#d4a84b]">{"//"}</span> SecretTunnel
-          </h1>
+          </Link>
           <p className="font-sans text-[13px] text-[#8a8a8a] text-center">
             Create an account to track and manage your secrets.
           </p>

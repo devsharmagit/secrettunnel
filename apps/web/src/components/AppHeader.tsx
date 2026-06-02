@@ -28,14 +28,14 @@ export async function AppHeader({ maxWidthClass = "max-w-[640px]", session }: Ap
           <span className="text-[#d4a84b]">{"//"}</span> SecretTunnel
         </Link>
         <nav className="flex items-center gap-3">
-          <Link
+          {/* <Link
             className="text-[#8a8a8a] transition-colors hover:text-[#d4a84b]"
             href="https://github.com/devsharmagit"
             target="_blank"
             aria-label="SecretTunnel on GitHub"
           >
             <Github className="size-4.5" />
-          </Link>
+          </Link> */}
 
           {user ? (
             <div className="group relative">
