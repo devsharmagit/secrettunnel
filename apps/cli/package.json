@@ -1,6 +1,6 @@
 {
   "name": "secrettnl",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "SecretTunnel CLI to push and pull secrets",
   "type": "commonjs",
   "bin": {
